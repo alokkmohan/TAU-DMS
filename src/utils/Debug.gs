@@ -28,6 +28,23 @@ function debugSendOTP() {
   }
 }
 
+function debugDriveAccess() {
+  try {
+    Logger.log('--- Drive Folder Access Test ---');
+    const folder = DriveApp.getFolderById(CONFIG.ROOT_FOLDER_ID);
+    Logger.log('✅ Root folder found: ' + folder.getName());
+
+    const subFolder = getOrCreateFolder(CONFIG.ROOT_FOLDER_ID, 'Test_Folder');
+    Logger.log('✅ Sub-folder created/found: ' + subFolder.getName());
+
+    // Clean up test folder
+    subFolder.setTrashed(true);
+    Logger.log('✅ Drive access working perfectly!');
+  } catch (e) {
+    Logger.log('❌ Drive error: ' + e.toString());
+  }
+}
+
 function debugCheckUsersSheet() {
   const users = getSheetData(CONFIG.TABS.USERS);
   Logger.log('Total users: ' + users.length);

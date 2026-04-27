@@ -223,7 +223,7 @@
             <textarea id="descriptionInput" placeholder="Brief description (optional)"></textarea>
           </div>
           <div class="form-group">
-            <label>File Attach Karein * (PDF, Word, Excel, Image)</label>
+            <label>File Attach Karein * — PDF, Word, Excel, CSV, PPT, Image | Max: 10MB</label>
             <div class="file-drop" id="fileDrop"
                  onclick="document.getElementById('fileInput').click()"
                  ondragover="event.preventDefault();this.classList.add('drag-over')"
@@ -234,7 +234,7 @@
               <div class="file-name" id="fileNameDisplay"></div>
             </div>
             <input type="file" id="fileInput" style="display:none"
-                   accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                   accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png"
                    onchange="handleFileSelect(this)">
           </div>
           <button class="btn btn-primary btn-upload" id="uploadBtn" onclick="submitUpload()">📤 Upload Karein</button>
@@ -536,8 +536,13 @@ function handleDrop(e) {
   if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
 }
 function setFile(file) {
+  if (file.size > 10 * 1024 * 1024) {
+    showUploadAlert('File 10MB se badi hai. Chhoti file chunein.', 'error');
+    return;
+  }
   selectedFile = file;
-  document.getElementById('fileNameDisplay').textContent = '📄 ' + file.name;
+  var sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+  document.getElementById('fileNameDisplay').textContent = '📄 ' + file.name + ' (' + sizeMB + ' MB)';
 }
 
 function submitUpload() {
@@ -637,9 +642,19 @@ function renderDocsTable(tbodyId, rows, showUploader) {
       '<td>' + r.sub_component + '</td>' +
       (showUploader ? '<td>' + r.month + ' ' + r.year + '</td>' : '<td>' + r.month + '</td><td>' + r.year + '</td>') +
       '<td>' + statusBadge(r.status) + '</td>' +
-      '<td><a href="' + r.drive_link + '" target="_blank" class="btn btn-outline btn-sm">⬇ Download</a> ' + verifyBtns + '</td>' +
+      '<td><a href="' + toDownloadUrl(r.drive_link) + '" target="_blank" class="btn btn-outline btn-sm">⬇ Download</a> ' + verifyBtns + '</td>' +
       '</tr>';
   }).join('');
+}
+
+function toDownloadUrl(url) {
+  if (!url) return '#';
+  // Already download URL
+  if (url.includes('export=download')) return url;
+  // Extract file ID from any Drive URL format
+  var match = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+  if (match) return 'https://drive.google.com/uc?export=download&id=' + match[1];
+  return url;
 }
 
 function statusBadge(s) {
@@ -713,7 +728,7 @@ function renderCirculars(rows) {
       '<td>' + (r.ref_number || '—') + '</td>' +
       '<td>' + r.uploaded_at + '</td>' +
       '<td>' + (r.acknowledged ? '<span class="badge badge-verified">Acknowledged</span>' : '<span class="badge badge-pending">Pending</span>') + '</td>' +
-      '<td><a href="' + r.drive_link + '" target="_blank" class="btn btn-outline btn-sm">⬇ Download</a> ' + ackBtn + '</td>' +
+      '<td><a href="' + toDownloadUrl(r.drive_link) + '" target="_blank" class="btn btn-outline btn-sm">⬇ Download</a> ' + ackBtn + '</td>' +
       '</tr>';
   }).join('');
 }

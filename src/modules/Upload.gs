@@ -38,9 +38,14 @@ function uploadDocument(token, payload) {
 
     // Get file extension
     const ext = fileName.split('.').pop().toLowerCase();
-    const allowedExt = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png'];
+    const allowedExt = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'ppt', 'pptx', 'jpg', 'jpeg', 'png'];
     if (!allowedExt.includes(ext)) {
-      return errorResponse('Sirf PDF, Word, Excel, ya image files allowed hain.');
+      return errorResponse('Allowed formats: PDF, Word, Excel, CSV, PowerPoint, Image (JPG/PNG)');
+    }
+
+    // 10MB limit (base64 string length check: 10MB * 1.37 ≈ 13.7MB base64)
+    if (fileBase64.length > 13700000) {
+      return errorResponse('File size 10MB se zyada hai. Chhoti file upload karein.');
     }
 
     // Auto file name
@@ -90,7 +95,7 @@ function uploadDocument(token, payload) {
     });
 
   } catch (e) {
-    console.error('uploadDocument error:', e);
+    console.error('uploadDocument error — ' + e.message + ' | Stack: ' + e.stack);
     return errorResponse('Upload mein problem aayi: ' + e.message);
   }
 }

@@ -26,11 +26,16 @@ function saveFileToDrive(base64Data, mimeType, fileName, folderId) {
   const folder   = DriveApp.getFolderById(folderId);
   const file     = folder.createFile(blob);
 
-  file.setSharing(DriveApp.Access.DOMAIN_WITH_LINK, DriveApp.Permission.VIEW);
+  try {
+    file.setSharing(DriveApp.Access.DOMAIN_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (e) {
+    console.log('Sharing setting skipped: ' + e.message);
+  }
 
+  const fileId = file.getId();
   return {
-    fileId:  file.getId(),
-    fileUrl: file.getUrl(),
+    fileId:   fileId,
+    fileUrl:  'https://drive.google.com/uc?export=download&id=' + fileId,
     fileName: file.getName()
   };
 }
