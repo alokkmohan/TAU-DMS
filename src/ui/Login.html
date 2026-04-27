@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — DMS UP Shiksha Vibhag</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, #1a237e 0%, #283593 60%, #3949ab 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+      padding: 40px 36px 36px;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .logo-area {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .logo-area h1 {
+      font-size: 1.4rem;
+      color: #1a237e;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .logo-area p {
+      font-size: 0.82rem;
+      color: #757575;
+      margin-top: 4px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: #424242;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    input[type="email"],
+    input[type="text"] {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #c5cae9;
+      border-radius: 7px;
+      font-size: 0.97rem;
+      outline: none;
+      transition: border 0.2s;
+      color: #212121;
+    }
+
+    input:focus { border-color: #3949ab; }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      background: #1a237e;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 18px;
+      transition: background 0.2s;
+    }
+
+    .btn:hover { background: #283593; }
+    .btn:disabled { background: #9fa8da; cursor: not-allowed; }
+
+    .msg {
+      margin-top: 14px;
+      padding: 10px 14px;
+      border-radius: 7px;
+      font-size: 0.88rem;
+      display: none;
+    }
+
+    .msg.error   { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+    .msg.success { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+
+    .otp-section { display: none; margin-top: 22px; }
+
+    .otp-info {
+      font-size: 0.82rem;
+      color: #757575;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+
+    .resend-link {
+      display: block;
+      text-align: center;
+      margin-top: 12px;
+      font-size: 0.83rem;
+      color: #3949ab;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid #fff;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #e8eaf6;
+      margin: 24px 0 0;
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo-area">
+    <h1>DMS<br>UP Shiksha Vibhag</h1>
+    <p>Document Management System<br>Educate Girls</p>
+  </div>
+
+  <!-- Step 1: Email -->
+  <div id="emailSection">
+    <label for="emailInput">Email ID</label>
+    <input type="email" id="emailInput" placeholder="aapka@educategirls.ngo" autocomplete="email">
+    <button class="btn" id="sendOtpBtn" onclick="sendOTP()">OTP Bhejein</button>
+  </div>
+
+  <!-- Step 2: OTP -->
+  <div class="otp-section" id="otpSection">
+    <hr class="divider">
+    <p class="otp-info" id="otpInfo"></p>
+    <label for="otpInput">OTP Darj Karein</label>
+    <input type="text" id="otpInput" placeholder="6-digit OTP" maxlength="6" autocomplete="one-time-code">
+    <button class="btn" id="verifyOtpBtn" onclick="verifyOTP()">Login Karein</button>
+    <span class="resend-link" onclick="resendOTP()">OTP dobara bhejein</span>
+  </div>
+
+  <div class="msg" id="msgBox"></div>
+</div>
+
+<script>
+  let currentEmail = '';
+
+  function showMsg(text, type) {
+    const box = document.getElementById('msgBox');
+    box.textContent = text;
+    box.className = 'msg ' + type;
+    box.style.display = 'block';
+  }
+
+  function hideMsg() {
+    document.getElementById('msgBox').style.display = 'none';
+  }
+
+  function setLoading(btnId, loading, defaultText) {
+    const btn = document.getElementById(btnId);
+    btn.disabled = loading;
+    btn.innerHTML = loading
+      ? '<span class="spinner"></span>Thoda ruko...'
+      : defaultText;
+  }
+
+  function sendOTP() {
+    const email = document.getElementById('emailInput').value.trim().toLowerCase();
+    if (!email) { showMsg('Email daalna zaroori hai.', 'error'); return; }
+    if (!email.endsWith('@educategirls.ngo')) {
+      showMsg('Sirf educategirls.ngo email allowed hai.', 'error'); return;
+    }
+
+    hideMsg();
+    setLoading('sendOtpBtn', true, 'OTP Bhejein');
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        setLoading('sendOtpBtn', false, 'OTP Bhejein');
+        if (!res.success) { showMsg(res.message, 'error'); return; }
+        currentEmail = email;
+        document.getElementById('otpSection').style.display = 'block';
+        document.getElementById('otpInfo').textContent =
+          'OTP bheja gaya: ' + email + ' par (10 minute valid)';
+        document.getElementById('otpInput').focus();
+        showMsg('OTP aapke email par bheja gaya hai.', 'success');
+      })
+      .withFailureHandler(function(err) {
+        setLoading('sendOtpBtn', false, 'OTP Bhejein');
+        showMsg('Server error. Dobara try karein.', 'error');
+      })
+      .sendOTP(email);
+  }
+
+  function verifyOTP() {
+    const otp = document.getElementById('otpInput').value.trim();
+    if (!otp || otp.length !== 6) { showMsg('6-digit OTP sahi se daalen.', 'error'); return; }
+
+    hideMsg();
+    setLoading('verifyOtpBtn', true, 'Login Karein');
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        setLoading('verifyOtpBtn', false, 'Login Karein');
+        if (!res.success) { showMsg(res.message, 'error'); return; }
+        // Store token in sessionStorage and redirect to dashboard
+        sessionStorage.setItem('dms_token', res.data.token);
+        sessionStorage.setItem('dms_role', res.data.role);
+        sessionStorage.setItem('dms_name', res.data.name);
+        showMsg('Login successful! Dashboard load ho raha hai...', 'success');
+        google.script.run
+          .withSuccessHandler(function(url) { window.top.location.href = url; })
+          .getDashboardUrl();
+      })
+      .withFailureHandler(function(err) {
+        setLoading('verifyOtpBtn', false, 'Login Karein');
+        showMsg('Server error. Dobara try karein.', 'error');
+      })
+      .verifyOTP(currentEmail, otp);
+  }
+
+  function resendOTP() {
+    document.getElementById('otpInput').value = '';
+    hideMsg();
+    sendOTP();
+  }
+
+  // Allow Enter key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      if (document.getElementById('otpSection').style.display === 'block') {
+        verifyOTP();
+      } else {
+        sendOTP();
+      }
+    }
+  });
+</script>
+</body>
+</html>
