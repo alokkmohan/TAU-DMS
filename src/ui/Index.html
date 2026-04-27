@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DMS — UP Shiksha Vibhag</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; color: #212121; }
+
+    /* ── LOGIN ── */
+    #loginPage {
+      background: linear-gradient(135deg, #1a237e 0%, #283593 60%, #3949ab 100%);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    }
+    .login-card {
+      background: #fff; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+      padding: 40px 36px 36px; width: 100%; max-width: 420px;
+    }
+    .logo-area { text-align: center; margin-bottom: 28px; }
+    .logo-area h1 { font-size: 1.4rem; color: #1a237e; font-weight: 700; line-height: 1.3; }
+    .logo-area p  { font-size: 0.82rem; color: #757575; margin-top: 4px; }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      background: #1a237e; color: #fff;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 56px;
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .topbar-title { font-size: 1.05rem; font-weight: 700; }
+    .topbar-right  { display: flex; align-items: center; gap: 14px; font-size: 0.85rem; }
+    .role-badge {
+      background: rgba(255,255,255,0.2); padding: 3px 10px;
+      border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+    }
+    .logout-btn {
+      background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4);
+      color: #fff; padding: 5px 14px; border-radius: 6px; cursor: pointer; font-size: 0.82rem;
+    }
+    .logout-btn:hover { background: rgba(255,255,255,0.25); }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 220px; background: #fff; border-right: 1px solid #e0e0e0;
+      position: fixed; top: 56px; bottom: 0; left: 0; overflow-y: auto; padding: 12px 0;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 20px; cursor: pointer; font-size: 0.9rem; color: #424242;
+      border-left: 3px solid transparent; transition: all 0.15s;
+    }
+    .nav-item:hover  { background: #e8eaf6; color: #1a237e; }
+    .nav-item.active { background: #e8eaf6; color: #1a237e; border-left-color: #1a237e; font-weight: 600; }
+
+    /* ── MAIN ── */
+    .layout { display: flex; margin-top: 56px; min-height: calc(100vh - 56px); }
+    .main   { margin-left: 220px; padding: 24px; flex: 1; }
+
+    /* ── CARDS ── */
+    .card { background: #fff; border-radius: 10px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; }
+    .card-title { font-size: 1.05rem; font-weight: 700; color: #1a237e; margin-bottom: 18px; }
+
+    /* ── FORM ── */
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 0.83rem; font-weight: 600; color: #424242; margin-bottom: 5px; }
+    select, input[type="text"], input[type="email"], textarea {
+      width: 100%; padding: 10px 12px; border: 1.5px solid #c5cae9;
+      border-radius: 7px; font-size: 0.93rem; outline: none; transition: border 0.2s;
+    }
+    select:focus, input:focus, textarea:focus { border-color: #3949ab; }
+    textarea { resize: vertical; min-height: 72px; }
+    .form-row { display: flex; gap: 16px; }
+    .form-row .form-group { flex: 1; }
+
+    /* ── FILE DROP ── */
+    .file-drop {
+      border: 2px dashed #c5cae9; border-radius: 8px; padding: 28px;
+      text-align: center; cursor: pointer; transition: all 0.2s; background: #fafafa;
+    }
+    .file-drop:hover, .file-drop.drag-over { border-color: #3949ab; background: #e8eaf6; }
+    .file-drop p  { color: #757575; font-size: 0.88rem; margin-top: 6px; }
+    .file-name    { color: #1a237e; font-weight: 600; margin-top: 8px; font-size: 0.9rem; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      padding: 10px 22px; border: none; border-radius: 7px;
+      font-size: 0.93rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-primary  { background: #1a237e; color: #fff; width: 100%; margin-top: 18px; }
+    .btn-primary:hover    { background: #283593; }
+    .btn-primary:disabled { background: #9fa8da; cursor: not-allowed; }
+    .btn-outline  { background: #fff; color: #1a237e; border: 1.5px solid #1a237e; }
+    .btn-outline:hover { background: #e8eaf6; }
+    .btn-sm       { padding: 5px 12px; font-size: 0.8rem; }
+    .btn-success  { background: #2e7d32; color: #fff; }
+    .btn-danger   { background: #c62828; color: #fff; }
+    .btn-upload   { width: auto; margin-top: 0; }
+
+    /* ── FILTERS ── */
+    .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; }
+    .filters select, .filters input { width: auto; min-width: 130px; }
+
+    /* ── TABLE ── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+    th { background: #1a237e; color: #fff; padding: 10px 12px; text-align: left; font-weight: 600; white-space: nowrap; }
+    td { padding: 9px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+    tr:hover td { background: #f5f5f5; }
+    .no-data { text-align: center; color: #9e9e9e; padding: 32px; }
+
+    /* ── BADGES ── */
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.73rem; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
+    .badge-pending  { background: #fff3e0; color: #e65100; }
+    .badge-verified { background: #e8f5e9; color: #2e7d32; }
+    .badge-rejected { background: #ffebee; color: #c62828; }
+    .badge-approved { background: #e3f2fd; color: #1565c0; }
+    .badge-archived { background: #f5f5f5; color: #757575; }
+
+    /* ── ALERTS ── */
+    .msg, .alert {
+      padding: 10px 14px; border-radius: 7px; font-size: 0.88rem;
+      margin-top: 14px; display: none;
+    }
+    .error,  .alert-error   { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; display: block; }
+    .success,.alert-success  { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; display: block; }
+
+    /* ── SPINNER ── */
+    .spinner {
+      display: inline-block; width: 15px; height: 15px;
+      border: 2px solid #fff; border-top-color: transparent;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      vertical-align: middle; margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── MODAL ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 10px; padding: 28px; width: 90%; max-width: 480px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+    .modal-title { font-size: 1rem; font-weight: 700; color: #1a237e; margin-bottom: 16px; }
+
+    .section { display: none; }
+    .section.active { display: block; }
+    #dashboardPage { display: none; }
+    .otp-section { display: none; margin-top: 22px; }
+    .otp-info { font-size: 0.82rem; color: #757575; margin-bottom: 14px; text-align: center; }
+    .resend-link { display: block; text-align: center; margin-top: 12px; font-size: 0.83rem; color: #3949ab; cursor: pointer; text-decoration: underline; }
+    .divider { border: none; border-top: 1px solid #e8eaf6; margin: 24px 0 0; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════ LOGIN PAGE ══════════════ -->
+<div id="loginPage">
+  <div class="login-card">
+    <div class="logo-area">
+      <h1>DMS<br>UP Shiksha Vibhag</h1>
+      <p>Document Management System<br>Educate Girls</p>
+    </div>
+
+    <div id="emailSection">
+      <label for="emailInput">Email ID</label>
+      <input type="email" id="emailInput" placeholder="aapka@educategirls.ngo" autocomplete="email">
+      <button class="btn btn-primary" id="sendOtpBtn" onclick="sendOTP()">OTP Bhejein</button>
+    </div>
+
+    <div class="otp-section" id="otpSection">
+      <hr class="divider">
+      <p class="otp-info" id="otpInfo"></p>
+      <label for="otpInput">OTP Darj Karein</label>
+      <input type="text" id="otpInput" placeholder="6-digit OTP" maxlength="6">
+      <button class="btn btn-primary" id="verifyOtpBtn" onclick="verifyOTP()">Login Karein</button>
+      <span class="resend-link" onclick="resendOTP()">OTP dobara bhejein</span>
+    </div>
+
+    <div id="loginMsg"></div>
+  </div>
+</div>
+
+<!-- ══════════════ DASHBOARD PAGE ══════════════ -->
+<div id="dashboardPage">
+  <div class="topbar">
+    <div class="topbar-title">DMS — UP Shiksha Vibhag</div>
+    <div class="topbar-right">
+      <span id="userNameDisplay"></span>
+      <span class="role-badge" id="roleDisplay"></span>
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="sidebar" id="sidebar"></div>
+
+  <div class="layout">
+    <div class="main">
+
+      <!-- Upload -->
+      <div class="section" id="sec-upload">
+        <div class="card">
+          <div class="card-title">📤 Naya Document Upload</div>
+          <div id="uploadAlert" style="display:none" class="alert"></div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Component *</label>
+              <select id="componentSelect" onchange="loadSubComponents()">
+                <option value="">-- Component chunein --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Sub-Component *</label>
+              <select id="subComponentSelect" onchange="fillDescription()" disabled>
+                <option value="">-- Pehle component chunein --</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Subject *</label>
+            <input type="text" id="subjectInput" placeholder="Document ka subject likhein">
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <textarea id="descriptionInput" placeholder="Brief description (optional)"></textarea>
+          </div>
+          <div class="form-group">
+            <label>File Attach Karein * (PDF, Word, Excel, Image)</label>
+            <div class="file-drop" id="fileDrop"
+                 onclick="document.getElementById('fileInput').click()"
+                 ondragover="event.preventDefault();this.classList.add('drag-over')"
+                 ondragleave="this.classList.remove('drag-over')"
+                 ondrop="handleDrop(event)">
+              <div style="font-size:2rem">📎</div>
+              <p>Click karein ya file yahan drag karein</p>
+              <div class="file-name" id="fileNameDisplay"></div>
+            </div>
+            <input type="file" id="fileInput" style="display:none"
+                   accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                   onchange="handleFileSelect(this)">
+          </div>
+          <button class="btn btn-primary btn-upload" id="uploadBtn" onclick="submitUpload()">📤 Upload Karein</button>
+        </div>
+      </div>
+
+      <!-- My Docs -->
+      <div class="section" id="sec-mydocs">
+        <div class="card">
+          <div class="card-title">📁 Mere Documents</div>
+          <div class="filters">
+            <select id="filterYear" onchange="loadDocs()"><option value="">Saal</option></select>
+            <select id="filterMonth" onchange="loadDocs()">
+              <option value="">Mahina</option>
+              <option>January</option><option>February</option><option>March</option>
+              <option>April</option><option>May</option><option>June</option>
+              <option>July</option><option>August</option><option>September</option>
+              <option>October</option><option>November</option><option>December</option>
+            </select>
+            <select id="filterComponent" onchange="loadDocs()"><option value="">Component</option></select>
+            <select id="filterStatus" onchange="loadDocs()">
+              <option value="">Status</option>
+              <option value="pending">Pending</option>
+              <option value="tl_verified">TL Verified</option>
+              <option value="tl_rejected">TL Rejected</option>
+              <option value="admin_approved">Approved</option>
+            </select>
+            <input type="text" id="filterSearch" placeholder="Search..." oninput="loadDocs()" style="min-width:160px;padding:10px 12px;border:1.5px solid #c5cae9;border-radius:7px;font-size:0.93rem">
+            <button class="btn btn-outline btn-sm" onclick="clearFilters()">Clear</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Subject</th><th>Component</th><th>Sub-Component</th><th>Mahina</th><th>Saal</th><th>Status</th><th>Action</th></tr></thead>
+              <tbody id="docsTableBody"><tr><td colspan="8" class="no-data">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- All Docs (TL + Admin) -->
+      <div class="section" id="sec-alldocs">
+        <div class="card">
+          <div class="card-title">📋 Sabhi Documents</div>
+          <div class="filters">
+            <select id="allFilterYear" onchange="loadAllDocs()"><option value="">Saal</option></select>
+            <select id="allFilterMonth" onchange="loadAllDocs()">
+              <option value="">Mahina</option>
+              <option>January</option><option>February</option><option>March</option>
+              <option>April</option><option>May</option><option>June</option>
+              <option>July</option><option>August</option><option>September</option>
+              <option>October</option><option>November</option><option>December</option>
+            </select>
+            <select id="allFilterComponent" onchange="loadAllDocs()"><option value="">Component</option></select>
+            <select id="allFilterStatus" onchange="loadAllDocs()">
+              <option value="">Status</option>
+              <option value="pending">Pending</option>
+              <option value="tl_verified">TL Verified</option>
+              <option value="tl_rejected">TL Rejected</option>
+              <option value="admin_approved">Approved</option>
+            </select>
+            <input type="text" id="allFilterSearch" placeholder="Search..." oninput="loadAllDocs()" style="min-width:160px;padding:10px 12px;border:1.5px solid #c5cae9;border-radius:7px;font-size:0.93rem">
+            <button class="btn btn-outline btn-sm" onclick="clearAllFilters()">Clear</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Uploader</th><th>Subject</th><th>Component</th><th>Sub-Component</th><th>Mahina / Saal</th><th>Status</th><th>Action</th></tr></thead>
+              <tbody id="allDocsTableBody"><tr><td colspan="8" class="no-data">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Circulars -->
+      <div class="section" id="sec-circulars">
+        <div class="card">
+          <div class="card-title">📢 Circulars & Orders</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Title</th><th>Ref No.</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+              <tbody id="circularsTableBody"><tr><td colspan="6" class="no-data">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- REJECT MODAL -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal">
+    <div class="modal-title">❌ Document Reject Karein</div>
+    <div class="form-group">
+      <label>Rejection Reason *</label>
+      <textarea id="rejectRemark" placeholder="Reason likhein..." style="min-height:90px"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="closeRejectModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmReject()">Reject Karein</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════
+//  SESSION
+// ════════════════════════════════════════════════
+let SESSION = { token: null, role: null, name: null };
+
+function initApp() {
+  const token = sessionStorage.getItem('dms_token');
+  const role  = sessionStorage.getItem('dms_role');
+  const name  = sessionStorage.getItem('dms_name');
+  if (token && role && name) {
+    SESSION = { token, role, name };
+    showDashboard();
+  } else {
+    showLoginPage();
+  }
+}
+
+function showLoginPage() {
+  document.getElementById('loginPage').style.display = 'flex';
+  document.getElementById('dashboardPage').style.display = 'none';
+}
+
+function showDashboard() {
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('dashboardPage').style.display = 'block';
+  document.getElementById('userNameDisplay').textContent = SESSION.name;
+  document.getElementById('roleDisplay').textContent =
+    SESSION.role === 'super_admin' ? 'Super Admin' :
+    SESSION.role === 'team_lead'   ? 'Team Lead' : 'Manager';
+  buildSidebar();
+  loadComponents();
+  populateYearFilters();
+  showSection('upload');
+}
+
+// ════════════════════════════════════════════════
+//  LOGIN
+// ════════════════════════════════════════════════
+let currentEmail = '';
+
+function showLoginMsg(text, type) {
+  const el = document.getElementById('loginMsg');
+  el.textContent = text;
+  el.className = type;
+  el.style.display = 'block';
+}
+
+function setLoginLoading(btnId, loading, label) {
+  const btn = document.getElementById(btnId);
+  btn.disabled = loading;
+  btn.innerHTML = loading ? '<span class="spinner"></span>Thoda ruko...' : label;
+}
+
+function sendOTP() {
+  const email = document.getElementById('emailInput').value.trim().toLowerCase();
+  if (!email) { showLoginMsg('Email daalna zaroori hai.', 'error'); return; }
+  if (!email.endsWith('@educategirls.ngo')) { showLoginMsg('Sirf educategirls.ngo email allowed hai.', 'error'); return; }
+  setLoginLoading('sendOtpBtn', true, 'OTP Bhejein');
+  document.getElementById('loginMsg').style.display = 'none';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      setLoginLoading('sendOtpBtn', false, 'OTP Bhejein');
+      if (!res.success) { showLoginMsg(res.message, 'error'); return; }
+      currentEmail = email;
+      document.getElementById('otpSection').style.display = 'block';
+      document.getElementById('otpInfo').textContent = 'OTP bheja gaya: ' + email + ' par (10 minute valid)';
+      document.getElementById('otpInput').focus();
+      showLoginMsg('OTP aapke email par bheja gaya hai.', 'success');
+    })
+    .withFailureHandler(function() {
+      setLoginLoading('sendOtpBtn', false, 'OTP Bhejein');
+      showLoginMsg('Server error. Dobara try karein.', 'error');
+    })
+    .sendOTP(email);
+}
+
+function verifyOTP() {
+  const otp = document.getElementById('otpInput').value.trim();
+  if (!otp || otp.length !== 6) { showLoginMsg('6-digit OTP sahi se daalen.', 'error'); return; }
+  setLoginLoading('verifyOtpBtn', true, 'Login Karein');
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      setLoginLoading('verifyOtpBtn', false, 'Login Karein');
+      if (!res.success) { showLoginMsg(res.message, 'error'); return; }
+      sessionStorage.setItem('dms_token', res.data.token);
+      sessionStorage.setItem('dms_role',  res.data.role);
+      sessionStorage.setItem('dms_name',  res.data.name);
+      SESSION = { token: res.data.token, role: res.data.role, name: res.data.name };
+      showDashboard();
+    })
+    .withFailureHandler(function() {
+      setLoginLoading('verifyOtpBtn', false, 'Login Karein');
+      showLoginMsg('Server error. Dobara try karein.', 'error');
+    })
+    .verifyOTP(currentEmail, otp);
+}
+
+function resendOTP() {
+  document.getElementById('otpInput').value = '';
+  document.getElementById('loginMsg').style.display = 'none';
+  sendOTP();
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Enter') return;
+  if (document.getElementById('otpSection').style.display === 'block') verifyOTP();
+  else sendOTP();
+});
+
+// ════════════════════════════════════════════════
+//  SIDEBAR
+// ════════════════════════════════════════════════
+function buildSidebar() {
+  const items = [
+    { id: 'upload',    icon: '📤', label: 'Upload Document' },
+    { id: 'mydocs',    icon: '📁', label: 'Mere Documents' }
+  ];
+  if (SESSION.role === 'team_lead' || SESSION.role === 'super_admin') {
+    items.push({ id: 'alldocs', icon: '📋', label: 'Sabhi Documents' });
+  }
+  items.push({ id: 'circulars', icon: '📢', label: 'Circulars' });
+
+  document.getElementById('sidebar').innerHTML = items.map(item =>
+    `<div class="nav-item" id="nav-${item.id}" onclick="showSection('${item.id}')">
+       <span>${item.icon}</span> ${item.label}
+     </div>`
+  ).join('');
+}
+
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const sec = document.getElementById('sec-' + id);
+  const nav = document.getElementById('nav-' + id);
+  if (sec) sec.classList.add('active');
+  if (nav) nav.classList.add('active');
+  if (id === 'mydocs')    loadDocs();
+  if (id === 'alldocs')   loadAllDocs();
+  if (id === 'circulars') loadCirculars();
+}
+
+// ════════════════════════════════════════════════
+//  UPLOAD
+// ════════════════════════════════════════════════
+let selectedFile = null;
+
+function loadComponents() {
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res.success) return;
+      ['componentSelect','filterComponent','allFilterComponent'].forEach(function(id) {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        res.data.forEach(function(c) {
+          const o = document.createElement('option');
+          o.value = o.textContent = c;
+          sel.appendChild(o);
+        });
+      });
+    }).getComponents(SESSION.token);
+}
+
+function loadSubComponents() {
+  const comp = document.getElementById('componentSelect').value;
+  const sub  = document.getElementById('subComponentSelect');
+  sub.innerHTML = '<option value="">-- Sub-component chunein --</option>';
+  sub.disabled  = !comp;
+  document.getElementById('descriptionInput').value = '';
+  if (!comp) return;
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res.success) return;
+      res.data.forEach(function(item) {
+        const o = document.createElement('option');
+        o.value = item.sub; o.textContent = item.sub; o.dataset.desc = item.desc;
+        sub.appendChild(o);
+      });
+      sub.disabled = false;
+    }).getSubComponents(SESSION.token, comp);
+}
+
+function fillDescription() {
+  const sub = document.getElementById('subComponentSelect');
+  const opt = sub.options[sub.selectedIndex];
+  if (opt && opt.dataset.desc) document.getElementById('descriptionInput').value = opt.dataset.desc;
+}
+
+function handleFileSelect(input) { if (input.files[0]) setFile(input.files[0]); }
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('fileDrop').classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+}
+function setFile(file) {
+  selectedFile = file;
+  document.getElementById('fileNameDisplay').textContent = '📄 ' + file.name;
+}
+
+function submitUpload() {
+  const component    = document.getElementById('componentSelect').value;
+  const subComponent = document.getElementById('subComponentSelect').value;
+  const subject      = document.getElementById('subjectInput').value.trim();
+  const description  = document.getElementById('descriptionInput').value.trim();
+  if (!component || !subComponent || !subject || !selectedFile) {
+    showUploadAlert('Saari required fields bharein aur file attach karein.', 'error'); return;
+  }
+  const btn = document.getElementById('uploadBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Upload ho raha hai...';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const base64 = e.target.result.split(',')[1];
+    google.script.run
+      .withSuccessHandler(function(res) {
+        btn.disabled = false; btn.innerHTML = '📤 Upload Karein';
+        if (!res.success) { showUploadAlert(res.message, 'error'); return; }
+        showUploadAlert('✅ ' + res.data.message + ' | File: ' + res.data.fileName, 'success');
+        resetUploadForm();
+      })
+      .withFailureHandler(function() {
+        btn.disabled = false; btn.innerHTML = '📤 Upload Karein';
+        showUploadAlert('Server error. Dobara try karein.', 'error');
+      })
+      .uploadDocument(SESSION.token, { component, subComponent, subject, description,
+        fileBase64: base64, fileName: selectedFile.name, mimeType: selectedFile.type });
+  };
+  reader.readAsDataURL(selectedFile);
+}
+
+function showUploadAlert(msg, type) {
+  const el = document.getElementById('uploadAlert');
+  el.textContent = msg; el.className = 'alert alert-' + type; el.style.display = 'block';
+  setTimeout(function() { el.style.display = 'none'; }, 7000);
+}
+
+function resetUploadForm() {
+  document.getElementById('componentSelect').value = '';
+  document.getElementById('subComponentSelect').innerHTML = '<option value="">-- Pehle component chunein --</option>';
+  document.getElementById('subComponentSelect').disabled = true;
+  document.getElementById('subjectInput').value = '';
+  document.getElementById('descriptionInput').value = '';
+  document.getElementById('fileNameDisplay').textContent = '';
+  document.getElementById('fileInput').value = '';
+  selectedFile = null;
+}
+
+// ════════════════════════════════════════════════
+//  DOCUMENTS
+// ════════════════════════════════════════════════
+function loadDocs() {
+  document.getElementById('docsTableBody').innerHTML = '<tr><td colspan="8" class="no-data">Loading...</td></tr>';
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res.success) return;
+      renderDocsTable('docsTableBody', res.data, false);
+    }).getDocuments(SESSION.token, getFilters('filter'));
+}
+
+function loadAllDocs() {
+  document.getElementById('allDocsTableBody').innerHTML = '<tr><td colspan="8" class="no-data">Loading...</td></tr>';
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res.success) return;
+      renderDocsTable('allDocsTableBody', res.data, true);
+    }).getDocuments(SESSION.token, getFilters('allFilter'));
+}
+
+function getFilters(prefix) {
+  return {
+    year:      document.getElementById(prefix + 'Year').value,
+    month:     document.getElementById(prefix + 'Month').value,
+    component: document.getElementById(prefix + 'Component').value,
+    status:    document.getElementById(prefix + 'Status').value,
+    search:    document.getElementById(prefix + 'Search').value
+  };
+}
+
+function renderDocsTable(tbodyId, rows, showUploader) {
+  const tbody = document.getElementById(tbodyId);
+  const cols   = showUploader ? 8 : 8;
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="' + cols + '" class="no-data">Koi document nahi mila.</td></tr>'; return; }
+  tbody.innerHTML = rows.map(function(r, i) {
+    const canVerify = (SESSION.role === 'team_lead' || SESSION.role === 'super_admin') && r.status === 'pending';
+    const verifyBtns = canVerify
+      ? '<button class="btn btn-success btn-sm" onclick="verifyDoc(\'' + r.doc_id + '\')">✅ Verify</button> ' +
+        '<button class="btn btn-danger btn-sm" onclick="openRejectModal(\'' + r.doc_id + '\')">❌ Reject</button>'
+      : '';
+    return '<tr>' +
+      '<td>' + (i + 1) + '</td>' +
+      (showUploader ? '<td>' + r.uploader_name + '</td>' : '') +
+      '<td>' + r.subject + '</td>' +
+      '<td>' + r.component + '</td>' +
+      '<td>' + r.sub_component + '</td>' +
+      (showUploader ? '<td>' + r.month + ' ' + r.year + '</td>' : '<td>' + r.month + '</td><td>' + r.year + '</td>') +
+      '<td>' + statusBadge(r.status) + '</td>' +
+      '<td><a href="' + r.drive_link + '" target="_blank" class="btn btn-outline btn-sm">⬇ Download</a> ' + verifyBtns + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+function statusBadge(s) {
+  var map = { pending:'badge-pending,Pending', tl_verified:'badge-verified,TL Verified',
+    tl_rejected:'badge-rejected,TL Rejected', admin_approved:'badge-approved,Approved',
+    admin_rejected:'badge-rejected,Rejected', archived:'badge-archived,Archived' };
+  var parts = (map[s] || 'badge-pending,' + s).split(',');
+  return '<span class="badge ' + parts[0] + '">' + parts[1] + '</span>';
+}
+
+function clearFilters() {
+  ['filterYear','filterMonth','filterComponent','filterStatus'].forEach(function(id) { document.getElementById(id).value = ''; });
+  document.getElementById('filterSearch').value = ''; loadDocs();
+}
+function clearAllFilters() {
+  ['allFilterYear','allFilterMonth','allFilterComponent','allFilterStatus'].forEach(function(id) { document.getElementById(id).value = ''; });
+  document.getElementById('allFilterSearch').value = ''; loadAllDocs();
+}
+
+// ════════════════════════════════════════════════
+//  VERIFY / REJECT
+// ════════════════════════════════════════════════
+var rejectDocId = null;
+
+function verifyDoc(docId) {
+  if (!confirm('Is document ko verify karna chahte hain?')) return;
+  google.script.run
+    .withSuccessHandler(function(res) { alert(res.success ? '✅ Document verified!' : res.message); loadAllDocs(); })
+    .verifyDocument(SESSION.token, docId);
+}
+
+function openRejectModal(docId) {
+  rejectDocId = docId;
+  document.getElementById('rejectRemark').value = '';
+  document.getElementById('rejectModal').classList.add('open');
+}
+function closeRejectModal() { document.getElementById('rejectModal').classList.remove('open'); rejectDocId = null; }
+function confirmReject() {
+  var remark = document.getElementById('rejectRemark').value.trim();
+  if (!remark) { alert('Rejection reason zaroori hai.'); return; }
+  google.script.run
+    .withSuccessHandler(function(res) { closeRejectModal(); alert(res.success ? '❌ Document rejected.' : res.message); loadAllDocs(); })
+    .rejectDocument(SESSION.token, rejectDocId, remark);
+}
+
+// ════════════════════════════════════════════════
+//  CIRCULARS
+// ════════════════════════════════════════════════
+function loadCirculars() {
+  document.getElementById('circularsTableBody').innerHTML = '<tr><td colspan="6" class="no-data">Loading...</td></tr>';
+  google.script.run
+    .withSuccessHandler(function(res) { if (!res.success) return; renderCirculars(res.data); })
+    .getCirculars(SESSION.token);
+}
+
+function renderCirculars(rows) {
+  var tbody = document.getElementById('circularsTableBody');
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="6" class="no-data">Koi circular nahi hai.</td></tr>'; return; }
+  tbody.innerHTML = rows.map(function(r, i) {
+    var ackBtn = '';
+    if (SESSION.role === 'manager') {
+      ackBtn = r.acknowledged
+        ? '<span style="color:#2e7d32;font-weight:600">✅ Acknowledged</span>'
+        : '<button class="btn btn-success btn-sm" onclick="acknowledgeCircular(\'' + r.circular_id + '\', this)">✅ Maine padh liya</button>';
+    } else {
+      ackBtn = '<span style="font-size:0.8rem;color:#757575">' + r.ack_count + '/' + r.total_managers + ' acknowledged</span>';
+    }
+    return '<tr>' +
+      '<td>' + (i + 1) + '</td>' +
+      '<td>' + r.title + '</td>' +
+      '<td>' + (r.ref_number || '—') + '</td>' +
+      '<td>' + r.uploaded_at + '</td>' +
+      '<td>' + (r.acknowledged ? '<span class="badge badge-verified">Acknowledged</span>' : '<span class="badge badge-pending">Pending</span>') + '</td>' +
+      '<td><a href="' + r.drive_link + '" target="_blank" class="btn btn-outline btn-sm">⬇ Download</a> ' + ackBtn + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+function acknowledgeCircular(circularId, btn) {
+  btn.disabled = true; btn.textContent = '...';
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.success) { btn.outerHTML = '<span style="color:#2e7d32;font-weight:600">✅ Acknowledged</span>'; }
+      else { btn.disabled = false; btn.textContent = '✅ Maine padh liya'; alert(res.message); }
+    }).acknowledgeCircular(SESSION.token, circularId);
+}
+
+// ════════════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════════════
+function populateYearFilters() {
+  var y = new Date().getFullYear();
+  ['filterYear','allFilterYear'].forEach(function(id) {
+    var sel = document.getElementById(id);
+    if (!sel) return;
+    [y, y-1, y-2].forEach(function(yr) {
+      var o = document.createElement('option');
+      o.value = o.textContent = yr;
+      sel.appendChild(o);
+    });
+  });
+}
+
+function logout() {
+  if (!confirm('Logout karna chahte hain?')) return;
+  google.script.run.withSuccessHandler(function() {
+    sessionStorage.clear();
+    SESSION = { token: null, role: null, name: null };
+    document.getElementById('emailInput').value = '';
+    document.getElementById('otpInput').value = '';
+    document.getElementById('otpSection').style.display = 'none';
+    document.getElementById('loginMsg').style.display = 'none';
+    showLoginPage();
+  }).logoutUser(SESSION.token);
+}
+
+// ════════════════════════════════════════════════
+//  START
+// ════════════════════════════════════════════════
+initApp();
+</script>
+</body>
+</html>
