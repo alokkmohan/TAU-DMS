@@ -52,3 +52,18 @@ function debugCheckUsersSheet() {
     Logger.log('Email: ' + u.email + ' | Role: ' + u.role + ' | is_active: ' + u.is_active + ' (type: ' + typeof u.is_active + ')');
   });
 }
+
+// ── Run once to add a new user ──
+function addUser_GauravMishra() {
+  const sheet = getSheet(CONFIG.TABS.USERS);
+  sheet.appendRow([
+    'gaurav.mishra@educategirls.ngo',
+    'Gaurav Mishra',
+    'manager',
+    'Civil',
+    '',
+    formatDate(new Date()),
+    true
+  ]);
+  Logger.log('✅ Gaurav Mishra added successfully!');
+}
