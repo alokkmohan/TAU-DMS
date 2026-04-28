@@ -658,13 +658,17 @@ var ROLE_LABELS = {
 
 function getRoleBadge() {
   var label = ROLE_LABELS[SESSION.role] || SESSION.role;
-  if (SESSION.role === 'team_lead' || SESSION.role === 'state_lead') {
-    return label + (SESSION.state ? ' — ' + SESSION.state : '');
-  }
+  var state = SESSION.state || '';
+  var group = SESSION.state_group || '';
+
   if (SESSION.role === 'project_manager') {
-    return label + (SESSION.state_group ? ' — Group ' + SESSION.state_group : '');
+    return label + (group ? ' — Group ' + group : '');
   }
-  return label;
+  if (SESSION.role === 'ceo' || SESSION.role === 'super_admin') {
+    return label;
+  }
+  // manager / team_lead / state_lead — show state
+  return label + (state ? ' — ' + state : '');
 }
 
 function showDashboard() {
