@@ -1,117 +1,164 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DMS — UP Shiksha Vibhag</title>
+  <title>TAU — Document Management System</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; color: #212121; }
 
-    /* ── LOGIN ── */
+    /* ── LOGIN PAGE ── */
     #loginPage {
-      background: linear-gradient(135deg, #1a237e 0%, #283593 60%, #3949ab 100%);
+      background: linear-gradient(135deg, #0d1b4b 0%, #1a237e 50%, #283593 100%);
       min-height: 100vh; display: flex; align-items: center; justify-content: center;
     }
     .login-card {
-      background: #fff; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.25);
-      padding: 40px 36px 36px; width: 100%; max-width: 420px;
+      background: #fff; border-radius: 14px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+      padding: 40px 38px 36px; width: 100%; max-width: 430px;
     }
-    .logo-area { text-align: center; margin-bottom: 28px; }
-    .logo-area h1 { font-size: 1.4rem; color: #1a237e; font-weight: 700; line-height: 1.3; }
-    .logo-area p  { font-size: 0.82rem; color: #757575; margin-top: 4px; }
+    .login-logo-area {
+      text-align: center; margin-bottom: 28px;
+    }
+    .login-logo-area img {
+      height: 64px; object-fit: contain; margin-bottom: 14px;
+    }
+    .login-logo-area h1 {
+      font-size: 1.35rem; color: #1a237e; font-weight: 800;
+      letter-spacing: 0.3px; line-height: 1.3;
+    }
+    .login-logo-area p {
+      font-size: 0.82rem; color: #757575; margin-top: 5px;
+    }
+    .login-divider {
+      border: none; border-top: 1px solid #e8eaf6; margin: 22px 0;
+    }
 
     /* ── TOPBAR ── */
     .topbar {
-      background: #1a237e; color: #fff;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 24px; height: 56px;
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      background: linear-gradient(90deg, #0d1b4b 0%, #1a237e 100%);
+      color: #fff; display: flex; align-items: center;
+      justify-content: space-between; padding: 0 20px;
+      height: 58px; position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.35);
     }
-    .topbar-title { font-size: 1.05rem; font-weight: 700; }
-    .topbar-right  { display: flex; align-items: center; gap: 14px; font-size: 0.85rem; }
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+    .topbar-logo { height: 36px; object-fit: contain; border-radius: 4px; }
+    .topbar-brand { display: flex; flex-direction: column; line-height: 1.2; }
+    .topbar-brand-main { font-size: 1rem; font-weight: 800; letter-spacing: 0.3px; }
+    .topbar-brand-sub  { font-size: 0.7rem; color: rgba(255,255,255,0.7); font-weight: 400; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; font-size: 0.85rem; }
+    .topbar-user { font-weight: 600; }
     .role-badge {
-      background: rgba(255,255,255,0.2); padding: 3px 10px;
-      border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+      background: rgba(255,255,255,0.18); padding: 3px 10px;
+      border-radius: 12px; font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
     }
     .logout-btn {
-      background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4);
-      color: #fff; padding: 5px 14px; border-radius: 6px; cursor: pointer; font-size: 0.82rem;
+      background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.35);
+      color: #fff; padding: 5px 14px; border-radius: 6px;
+      cursor: pointer; font-size: 0.82rem; transition: background 0.15s;
     }
     .logout-btn:hover { background: rgba(255,255,255,0.25); }
 
     /* ── SIDEBAR ── */
     .sidebar {
       width: 220px; background: #fff; border-right: 1px solid #e0e0e0;
-      position: fixed; top: 56px; bottom: 0; left: 0; overflow-y: auto; padding: 12px 0;
+      position: fixed; top: 58px; bottom: 0; left: 0;
+      overflow-y: auto; padding: 14px 0;
+    }
+    .sidebar-section-label {
+      font-size: 0.68rem; font-weight: 700; color: #9e9e9e;
+      text-transform: uppercase; letter-spacing: 1px;
+      padding: 10px 20px 4px;
     }
     .nav-item {
       display: flex; align-items: center; gap: 10px;
-      padding: 11px 20px; cursor: pointer; font-size: 0.9rem; color: #424242;
+      padding: 11px 20px; cursor: pointer;
+      font-size: 0.88rem; color: #424242;
       border-left: 3px solid transparent; transition: all 0.15s;
     }
     .nav-item:hover  { background: #e8eaf6; color: #1a237e; }
     .nav-item.active { background: #e8eaf6; color: #1a237e; border-left-color: #1a237e; font-weight: 600; }
+    .nav-icon { font-size: 1rem; }
 
-    /* ── MAIN ── */
-    .layout { display: flex; margin-top: 56px; min-height: calc(100vh - 56px); }
+    /* ── MAIN LAYOUT ── */
+    .layout { display: flex; margin-top: 58px; min-height: calc(100vh - 58px); }
     .main   { margin-left: 220px; padding: 24px; flex: 1; }
 
     /* ── CARDS ── */
-    .card { background: #fff; border-radius: 10px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; }
-    .card-title { font-size: 1.05rem; font-weight: 700; color: #1a237e; margin-bottom: 18px; }
+    .card {
+      background: #fff; border-radius: 10px; padding: 24px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.09); margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 1rem; font-weight: 700; color: #1a237e;
+      margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
+      padding-bottom: 12px; border-bottom: 2px solid #e8eaf6;
+    }
 
     /* ── FORM ── */
     .form-group { margin-bottom: 16px; }
-    label { display: block; font-size: 0.83rem; font-weight: 600; color: #424242; margin-bottom: 5px; }
+    label { display: block; font-size: 0.82rem; font-weight: 600; color: #424242; margin-bottom: 5px; }
     select, input[type="text"], input[type="email"], textarea {
       width: 100%; padding: 10px 12px; border: 1.5px solid #c5cae9;
-      border-radius: 7px; font-size: 0.93rem; outline: none; transition: border 0.2s;
+      border-radius: 7px; font-size: 0.92rem; outline: none; transition: border 0.2s;
+      background: #fff;
     }
-    select:focus, input:focus, textarea:focus { border-color: #3949ab; }
+    select:focus, input:focus, textarea:focus { border-color: #3949ab; box-shadow: 0 0 0 3px rgba(57,73,171,0.1); }
     textarea { resize: vertical; min-height: 72px; }
     .form-row { display: flex; gap: 16px; }
     .form-row .form-group { flex: 1; }
 
     /* ── FILE DROP ── */
     .file-drop {
-      border: 2px dashed #c5cae9; border-radius: 8px; padding: 28px;
+      border: 2px dashed #c5cae9; border-radius: 8px; padding: 30px 20px;
       text-align: center; cursor: pointer; transition: all 0.2s; background: #fafafa;
     }
     .file-drop:hover, .file-drop.drag-over { border-color: #3949ab; background: #e8eaf6; }
-    .file-drop p  { color: #757575; font-size: 0.88rem; margin-top: 6px; }
-    .file-name    { color: #1a237e; font-weight: 600; margin-top: 8px; font-size: 0.9rem; }
+    .file-drop-icon { font-size: 2.2rem; }
+    .file-drop p  { color: #757575; font-size: 0.87rem; margin-top: 6px; }
+    .file-drop small { color: #9e9e9e; font-size: 0.78rem; }
+    .file-name { color: #1a237e; font-weight: 600; margin-top: 10px; font-size: 0.88rem; }
 
     /* ── BUTTONS ── */
     .btn {
       padding: 10px 22px; border: none; border-radius: 7px;
-      font-size: 0.93rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+      font-size: 0.92rem; font-weight: 600; cursor: pointer; transition: all 0.18s;
     }
     .btn-primary  { background: #1a237e; color: #fff; width: 100%; margin-top: 18px; }
     .btn-primary:hover    { background: #283593; }
     .btn-primary:disabled { background: #9fa8da; cursor: not-allowed; }
     .btn-outline  { background: #fff; color: #1a237e; border: 1.5px solid #1a237e; }
     .btn-outline:hover { background: #e8eaf6; }
-    .btn-sm       { padding: 5px 12px; font-size: 0.8rem; }
+    .btn-sm       { padding: 5px 12px; font-size: 0.79rem; }
     .btn-success  { background: #2e7d32; color: #fff; }
+    .btn-success:hover { background: #1b5e20; }
     .btn-danger   { background: #c62828; color: #fff; }
-    .btn-upload   { width: auto; margin-top: 0; }
+    .btn-danger:hover  { background: #b71c1c; }
 
     /* ── FILTERS ── */
     .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; }
-    .filters select, .filters input { width: auto; min-width: 130px; }
+    .filters select, .filters input[type="text"] {
+      width: auto; min-width: 130px; padding: 8px 12px; font-size: 0.88rem;
+    }
 
     /* ── TABLE ── */
     .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     th { background: #1a237e; color: #fff; padding: 10px 12px; text-align: left; font-weight: 600; white-space: nowrap; }
     td { padding: 9px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
-    tr:hover td { background: #f5f5f5; }
-    .no-data { text-align: center; color: #9e9e9e; padding: 32px; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f9f9ff; }
+    .no-data { text-align: center; color: #9e9e9e; padding: 32px !important; font-size: 0.9rem; }
 
     /* ── BADGES ── */
-    .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.73rem; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 12px;
+      font-size: 0.71rem; font-weight: 700; text-transform: uppercase;
+      white-space: nowrap; letter-spacing: 0.3px;
+    }
     .badge-pending  { background: #fff3e0; color: #e65100; }
     .badge-verified { background: #e8f5e9; color: #2e7d32; }
     .badge-rejected { background: #ffebee; color: #c62828; }
@@ -119,136 +166,192 @@
     .badge-archived { background: #f5f5f5; color: #757575; }
 
     /* ── ALERTS ── */
-    .msg, .alert {
+    .alert {
       padding: 10px 14px; border-radius: 7px; font-size: 0.88rem;
       margin-top: 14px; display: none;
     }
-    .error,  .alert-error   { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; display: block; }
-    .success,.alert-success  { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; display: block; }
+    .alert-error   { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; display: block; }
+    .alert-success { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; display: block; }
+    .msg { padding: 10px 14px; border-radius: 7px; font-size: 0.88rem; margin-top: 14px; display: none; }
+    .error   { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; display: block; }
+    .success { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; display: block; }
 
     /* ── SPINNER ── */
     .spinner {
-      display: inline-block; width: 15px; height: 15px;
-      border: 2px solid #fff; border-top-color: transparent;
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff;
       border-radius: 50%; animation: spin 0.7s linear infinite;
       vertical-align: middle; margin-right: 6px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ── MODAL ── */
-    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: center; justify-content: center; }
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 200;
+      align-items: center; justify-content: center;
+    }
     .modal-overlay.open { display: flex; }
-    .modal { background: #fff; border-radius: 10px; padding: 28px; width: 90%; max-width: 480px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
-    .modal-title { font-size: 1rem; font-weight: 700; color: #1a237e; margin-bottom: 16px; }
+    .modal {
+      background: #fff; border-radius: 12px; padding: 28px;
+      width: 90%; max-width: 480px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+    }
+    .modal-title { font-size: 1rem; font-weight: 700; color: #c62828; margin-bottom: 16px; }
 
+    /* ── SECTION VISIBILITY ── */
     .section { display: none; }
     .section.active { display: block; }
     #dashboardPage { display: none; }
-    .otp-section { display: none; margin-top: 22px; }
-    .otp-info { font-size: 0.82rem; color: #757575; margin-bottom: 14px; text-align: center; }
-    .resend-link { display: block; text-align: center; margin-top: 12px; font-size: 0.83rem; color: #3949ab; cursor: pointer; text-decoration: underline; }
-    .divider { border: none; border-top: 1px solid #e8eaf6; margin: 24px 0 0; }
+
+    /* ── OTP SECTION ── */
+    .otp-section { display: none; margin-top: 4px; }
+    .otp-info {
+      font-size: 0.81rem; color: #555; margin-bottom: 14px;
+      text-align: center; background: #e8eaf6; padding: 8px 12px; border-radius: 6px;
+    }
+    .resend-link {
+      display: block; text-align: center; margin-top: 12px;
+      font-size: 0.82rem; color: #3949ab; cursor: pointer; text-decoration: underline;
+    }
+    .resend-link:hover { color: #1a237e; }
+
+    /* ── STATS BAR ── */
+    .stats-bar { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+    .stat-card {
+      flex: 1; min-width: 130px; background: #fff; border-radius: 10px;
+      padding: 16px 20px; box-shadow: 0 1px 5px rgba(0,0,0,0.09);
+      border-left: 4px solid #1a237e; display: flex; flex-direction: column; gap: 4px;
+    }
+    .stat-card.orange { border-left-color: #e65100; }
+    .stat-card.green  { border-left-color: #2e7d32; }
+    .stat-card.blue   { border-left-color: #1565c0; }
+    .stat-num  { font-size: 1.7rem; font-weight: 800; color: #1a237e; line-height: 1; }
+    .stat-card.orange .stat-num { color: #e65100; }
+    .stat-card.green  .stat-num { color: #2e7d32; }
+    .stat-card.blue   .stat-num { color: #1565c0; }
+    .stat-label { font-size: 0.78rem; color: #757575; font-weight: 600; text-transform: uppercase; }
   </style>
 </head>
 <body>
 
-<!-- ══════════════ LOGIN PAGE ══════════════ -->
+<!-- ══════════════════════ LOGIN PAGE ══════════════════════ -->
 <div id="loginPage">
   <div class="login-card">
-    <div class="logo-area">
-      <h1>DMS<br>UP Shiksha Vibhag</h1>
-      <p>Document Management System<br>Educate Girls</p>
+    <div class="login-logo-area">
+      <img src="data:image/jpeg;base64,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" alt="Educate Girls" onerror="this.style.display='none'">
+      <h1>TAU — Document Management System</h1>
+      <p>Technical Assistant Unit &nbsp;|&nbsp; Educate Girls</p>
     </div>
 
+    <hr class="login-divider">
+
     <div id="emailSection">
-      <label for="emailInput">Email ID</label>
-      <input type="email" id="emailInput" placeholder="aapka@educategirls.ngo" autocomplete="email">
-      <button class="btn btn-primary" id="sendOtpBtn" onclick="sendOTP()">OTP Bhejein</button>
+      <div class="form-group">
+        <label for="emailInput">Your Email Address</label>
+        <input type="email" id="emailInput" placeholder="yourname@educategirls.ngo" autocomplete="email">
+      </div>
+      <button class="btn btn-primary" id="sendOtpBtn" onclick="sendOTP()">Send OTP</button>
     </div>
 
     <div class="otp-section" id="otpSection">
-      <hr class="divider">
+      <hr class="login-divider" style="margin-top:0">
       <p class="otp-info" id="otpInfo"></p>
-      <label for="otpInput">OTP Darj Karein</label>
-      <input type="text" id="otpInput" placeholder="6-digit OTP" maxlength="6">
-      <button class="btn btn-primary" id="verifyOtpBtn" onclick="verifyOTP()">Login Karein</button>
-      <span class="resend-link" onclick="resendOTP()">OTP dobara bhejein</span>
+      <div class="form-group">
+        <label for="otpInput">Enter OTP</label>
+        <input type="text" id="otpInput" placeholder="6-digit OTP" maxlength="6" inputmode="numeric">
+      </div>
+      <button class="btn btn-primary" id="verifyOtpBtn" onclick="verifyOTP()">Login</button>
+      <span class="resend-link" onclick="resendOTP()">Resend OTP</span>
     </div>
 
     <div id="loginMsg"></div>
   </div>
 </div>
 
-<!-- ══════════════ DASHBOARD PAGE ══════════════ -->
+<!-- ══════════════════════ DASHBOARD PAGE ══════════════════════ -->
 <div id="dashboardPage">
+
+  <!-- TOP BAR -->
   <div class="topbar">
-    <div class="topbar-title">DMS — UP Shiksha Vibhag</div>
+    <div class="topbar-left">
+      <img class="topbar-logo" src="data:image/jpeg;base64,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" alt="EG Logo" onerror="this.style.display='none'">
+      <div class="topbar-brand">
+        <span class="topbar-brand-main">TAU — Document Management System</span>
+        <span class="topbar-brand-sub">Technical Assistant Unit &nbsp;|&nbsp; Educate Girls</span>
+      </div>
+    </div>
     <div class="topbar-right">
-      <span id="userNameDisplay"></span>
+      <span class="topbar-user" id="userNameDisplay"></span>
       <span class="role-badge" id="roleDisplay"></span>
       <button class="logout-btn" onclick="logout()">Logout</button>
     </div>
   </div>
 
+  <!-- SIDEBAR -->
   <div class="sidebar" id="sidebar"></div>
 
+  <!-- MAIN CONTENT -->
   <div class="layout">
     <div class="main">
 
-      <!-- Upload -->
+      <!-- ── UPLOAD ── -->
       <div class="section" id="sec-upload">
         <div class="card">
-          <div class="card-title">📤 Naya Document Upload</div>
-          <div id="uploadAlert" style="display:none" class="alert"></div>
+          <div class="card-title">📤 Upload New Document</div>
+          <div id="uploadAlert" class="alert" style="display:none"></div>
           <div class="form-row">
             <div class="form-group">
-              <label>Component *</label>
+              <label>Component <span style="color:#c62828">*</span></label>
               <select id="componentSelect" onchange="loadSubComponents()">
-                <option value="">-- Component chunein --</option>
+                <option value="">— Select Component —</option>
               </select>
             </div>
             <div class="form-group">
-              <label>Sub-Component *</label>
+              <label>Sub-Component <span style="color:#c62828">*</span></label>
               <select id="subComponentSelect" onchange="fillDescription()" disabled>
-                <option value="">-- Pehle component chunein --</option>
+                <option value="">— Select component first —</option>
               </select>
             </div>
           </div>
           <div class="form-group">
-            <label>Subject *</label>
-            <input type="text" id="subjectInput" placeholder="Document ka subject likhein">
+            <label>Subject <span style="color:#c62828">*</span></label>
+            <input type="text" id="subjectInput" placeholder="Enter document subject">
           </div>
           <div class="form-group">
-            <label>Description</label>
-            <textarea id="descriptionInput" placeholder="Brief description (optional)"></textarea>
+            <label>Description <span style="color:#9e9e9e;font-weight:400">(optional)</span></label>
+            <textarea id="descriptionInput" placeholder="Brief description of the document"></textarea>
           </div>
           <div class="form-group">
-            <label>File Attach Karein * — PDF, Word, Excel, CSV, PPT, Image | Max: 10MB</label>
+            <label>Attach File <span style="color:#c62828">*</span></label>
             <div class="file-drop" id="fileDrop"
                  onclick="document.getElementById('fileInput').click()"
                  ondragover="event.preventDefault();this.classList.add('drag-over')"
                  ondragleave="this.classList.remove('drag-over')"
                  ondrop="handleDrop(event)">
-              <div style="font-size:2rem">📎</div>
-              <p>Click karein ya file yahan drag karein</p>
+              <div class="file-drop-icon">📎</div>
+              <p>Click to browse or drag &amp; drop file here</p>
+              <small>PDF, Word, Excel, CSV, PowerPoint, Image (JPG/PNG) &nbsp;|&nbsp; Max 10 MB</small>
               <div class="file-name" id="fileNameDisplay"></div>
             </div>
             <input type="file" id="fileInput" style="display:none"
                    accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png"
                    onchange="handleFileSelect(this)">
           </div>
-          <button class="btn btn-primary btn-upload" id="uploadBtn" onclick="submitUpload()">📤 Upload Karein</button>
+          <button class="btn btn-primary" style="width:auto;margin-top:0" id="uploadBtn" onclick="submitUpload()">
+            📤&nbsp; Upload Document
+          </button>
         </div>
       </div>
 
-      <!-- My Docs -->
+      <!-- ── MY DOCUMENTS ── -->
       <div class="section" id="sec-mydocs">
         <div class="card">
-          <div class="card-title">📁 Mere Documents</div>
+          <div class="card-title">📁 My Documents</div>
           <div class="filters">
-            <select id="filterYear" onchange="loadDocs()"><option value="">Saal</option></select>
+            <select id="filterYear" onchange="loadDocs()"><option value="">Year</option></select>
             <select id="filterMonth" onchange="loadDocs()">
-              <option value="">Mahina</option>
+              <option value="">Month</option>
               <option>January</option><option>February</option><option>March</option>
               <option>April</option><option>May</option><option>June</option>
               <option>July</option><option>August</option><option>September</option>
@@ -262,26 +365,34 @@
               <option value="tl_rejected">TL Rejected</option>
               <option value="admin_approved">Approved</option>
             </select>
-            <input type="text" id="filterSearch" placeholder="Search..." oninput="loadDocs()" style="min-width:160px;padding:10px 12px;border:1.5px solid #c5cae9;border-radius:7px;font-size:0.93rem">
+            <input type="text" id="filterSearch" placeholder="Search..." oninput="loadDocs()" style="min-width:160px">
             <button class="btn btn-outline btn-sm" onclick="clearFilters()">Clear</button>
           </div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>#</th><th>Subject</th><th>Component</th><th>Sub-Component</th><th>Mahina</th><th>Saal</th><th>Status</th><th>Action</th></tr></thead>
-              <tbody id="docsTableBody"><tr><td colspan="8" class="no-data">Loading...</td></tr></tbody>
+              <thead>
+                <tr>
+                  <th>#</th><th>Subject</th><th>Component</th>
+                  <th>Sub-Component</th><th>Month</th><th>Year</th>
+                  <th>Status</th><th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="docsTableBody">
+                <tr><td colspan="8" class="no-data">Loading…</td></tr>
+              </tbody>
             </table>
           </div>
         </div>
       </div>
 
-      <!-- All Docs (TL + Admin) -->
+      <!-- ── ALL DOCUMENTS (TL + Admin) ── -->
       <div class="section" id="sec-alldocs">
         <div class="card">
-          <div class="card-title">📋 Sabhi Documents</div>
+          <div class="card-title">📋 All Documents</div>
           <div class="filters">
-            <select id="allFilterYear" onchange="loadAllDocs()"><option value="">Saal</option></select>
+            <select id="allFilterYear" onchange="loadAllDocs()"><option value="">Year</option></select>
             <select id="allFilterMonth" onchange="loadAllDocs()">
-              <option value="">Mahina</option>
+              <option value="">Month</option>
               <option>January</option><option>February</option><option>March</option>
               <option>April</option><option>May</option><option>June</option>
               <option>July</option><option>August</option><option>September</option>
@@ -295,62 +406,76 @@
               <option value="tl_rejected">TL Rejected</option>
               <option value="admin_approved">Approved</option>
             </select>
-            <input type="text" id="allFilterSearch" placeholder="Search..." oninput="loadAllDocs()" style="min-width:160px;padding:10px 12px;border:1.5px solid #c5cae9;border-radius:7px;font-size:0.93rem">
+            <input type="text" id="allFilterSearch" placeholder="Search..." oninput="loadAllDocs()" style="min-width:160px">
             <button class="btn btn-outline btn-sm" onclick="clearAllFilters()">Clear</button>
           </div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>#</th><th>Uploader</th><th>Subject</th><th>Component</th><th>Sub-Component</th><th>Mahina / Saal</th><th>Status</th><th>Action</th></tr></thead>
-              <tbody id="allDocsTableBody"><tr><td colspan="8" class="no-data">Loading...</td></tr></tbody>
+              <thead>
+                <tr>
+                  <th>#</th><th>Uploader</th><th>Subject</th><th>Component</th>
+                  <th>Sub-Component</th><th>Month / Year</th><th>Status</th><th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="allDocsTableBody">
+                <tr><td colspan="8" class="no-data">Loading…</td></tr>
+              </tbody>
             </table>
           </div>
         </div>
       </div>
 
-      <!-- Circulars -->
+      <!-- ── CIRCULARS ── -->
       <div class="section" id="sec-circulars">
         <div class="card">
-          <div class="card-title">📢 Circulars & Orders</div>
+          <div class="card-title">📢 Circulars &amp; Orders</div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>#</th><th>Title</th><th>Ref No.</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
-              <tbody id="circularsTableBody"><tr><td colspan="6" class="no-data">Loading...</td></tr></tbody>
+              <thead>
+                <tr>
+                  <th>#</th><th>Title</th><th>Ref No.</th>
+                  <th>Date</th><th>Status</th><th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="circularsTableBody">
+                <tr><td colspan="6" class="no-data">Loading…</td></tr>
+              </tbody>
             </table>
           </div>
         </div>
       </div>
 
-    </div>
-  </div>
-</div>
+    </div><!-- /main -->
+  </div><!-- /layout -->
+</div><!-- /dashboardPage -->
 
-<!-- REJECT MODAL -->
+<!-- ══════════ REJECT MODAL ══════════ -->
 <div class="modal-overlay" id="rejectModal">
   <div class="modal">
-    <div class="modal-title">❌ Document Reject Karein</div>
+    <div class="modal-title">❌ Reject Document</div>
     <div class="form-group">
-      <label>Rejection Reason *</label>
-      <textarea id="rejectRemark" placeholder="Reason likhein..." style="min-height:90px"></textarea>
+      <label>Rejection Reason <span style="color:#c62828">*</span></label>
+      <textarea id="rejectRemark" placeholder="Enter reason for rejection..." style="min-height:90px"></textarea>
     </div>
-    <div style="display:flex;gap:10px;justify-content:flex-end">
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
       <button class="btn btn-outline" onclick="closeRejectModal()">Cancel</button>
-      <button class="btn btn-danger" onclick="confirmReject()">Reject Karein</button>
+      <button class="btn btn-danger" onclick="confirmReject()">Reject Document</button>
     </div>
   </div>
 </div>
 
 <script>
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 //  SESSION
-// ════════════════════════════════════════════════
-let SESSION = { token: null, role: null, name: null };
+// ══════════════════════════════════════════════════
+var SESSION = { token: null, role: null, name: null };
 
 function initApp() {
-  const token = sessionStorage.getItem('dms_token');
-  const role  = sessionStorage.getItem('dms_role');
-  const name  = sessionStorage.getItem('dms_name');
+  var token = sessionStorage.getItem('dms_token');
+  var role  = sessionStorage.getItem('dms_role');
+  var name  = sessionStorage.getItem('dms_name');
   if (token && role && name) {
-    SESSION = { token, role, name };
+    SESSION = { token: token, role: role, name: name };
     showDashboard();
   } else {
     showLoginPage();
@@ -368,63 +493,66 @@ function showDashboard() {
   document.getElementById('userNameDisplay').textContent = SESSION.name;
   document.getElementById('roleDisplay').textContent =
     SESSION.role === 'super_admin' ? 'Super Admin' :
-    SESSION.role === 'team_lead'   ? 'Team Lead' : 'Manager';
+    SESSION.role === 'team_lead'   ? 'Team Lead'   : 'Manager';
   buildSidebar();
   loadComponents();
   populateYearFilters();
   showSection('upload');
 }
 
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 //  LOGIN
-// ════════════════════════════════════════════════
-let currentEmail = '';
+// ══════════════════════════════════════════════════
+var currentEmail = '';
 
 function showLoginMsg(text, type) {
-  const el = document.getElementById('loginMsg');
+  var el = document.getElementById('loginMsg');
   el.textContent = text;
   el.className = type;
   el.style.display = 'block';
 }
 
 function setLoginLoading(btnId, loading, label) {
-  const btn = document.getElementById(btnId);
+  var btn = document.getElementById(btnId);
   btn.disabled = loading;
-  btn.innerHTML = loading ? '<span class="spinner"></span>Thoda ruko...' : label;
+  btn.innerHTML = loading ? '<span class="spinner"></span>Please wait…' : label;
 }
 
 function sendOTP() {
-  const email = document.getElementById('emailInput').value.trim().toLowerCase();
-  if (!email) { showLoginMsg('Email daalna zaroori hai.', 'error'); return; }
-  if (!email.endsWith('@educategirls.ngo')) { showLoginMsg('Sirf educategirls.ngo email allowed hai.', 'error'); return; }
-  setLoginLoading('sendOtpBtn', true, 'OTP Bhejein');
+  var email = document.getElementById('emailInput').value.trim().toLowerCase();
+  if (!email) { showLoginMsg('Please enter your email address.', 'error'); return; }
+  if (!email.endsWith('@educategirls.ngo')) {
+    showLoginMsg('Only @educategirls.ngo email addresses are allowed.', 'error'); return;
+  }
+  setLoginLoading('sendOtpBtn', true, 'Send OTP');
   document.getElementById('loginMsg').style.display = 'none';
 
   google.script.run
     .withSuccessHandler(function(res) {
-      setLoginLoading('sendOtpBtn', false, 'OTP Bhejein');
+      setLoginLoading('sendOtpBtn', false, 'Send OTP');
       if (!res.success) { showLoginMsg(res.message, 'error'); return; }
       currentEmail = email;
       document.getElementById('otpSection').style.display = 'block';
-      document.getElementById('otpInfo').textContent = 'OTP bheja gaya: ' + email + ' par (10 minute valid)';
+      document.getElementById('otpInfo').textContent =
+        'A 6-digit OTP has been sent to ' + email + ' (valid for 10 minutes)';
       document.getElementById('otpInput').focus();
-      showLoginMsg('OTP aapke email par bheja gaya hai.', 'success');
+      showLoginMsg('OTP sent successfully. Please check your email.', 'success');
     })
     .withFailureHandler(function() {
-      setLoginLoading('sendOtpBtn', false, 'OTP Bhejein');
-      showLoginMsg('Server error. Dobara try karein.', 'error');
+      setLoginLoading('sendOtpBtn', false, 'Send OTP');
+      showLoginMsg('Server error. Please try again.', 'error');
     })
     .sendOTP(email);
 }
 
 function verifyOTP() {
-  const otp = document.getElementById('otpInput').value.trim();
-  if (!otp || otp.length !== 6) { showLoginMsg('6-digit OTP sahi se daalen.', 'error'); return; }
-  setLoginLoading('verifyOtpBtn', true, 'Login Karein');
+  var otp = document.getElementById('otpInput').value.trim();
+  if (!otp || otp.length !== 6) { showLoginMsg('Please enter the 6-digit OTP.', 'error'); return; }
+  setLoginLoading('verifyOtpBtn', true, 'Login');
 
   google.script.run
     .withSuccessHandler(function(res) {
-      setLoginLoading('verifyOtpBtn', false, 'Login Karein');
+      setLoginLoading('verifyOtpBtn', false, 'Login');
       if (!res.success) { showLoginMsg(res.message, 'error'); return; }
       sessionStorage.setItem('dms_token', res.data.token);
       sessionStorage.setItem('dms_role',  res.data.role);
@@ -433,8 +561,8 @@ function verifyOTP() {
       showDashboard();
     })
     .withFailureHandler(function() {
-      setLoginLoading('verifyOtpBtn', false, 'Login Karein');
-      showLoginMsg('Server error. Dobara try karein.', 'error');
+      setLoginLoading('verifyOtpBtn', false, 'Login');
+      showLoginMsg('Server error. Please try again.', 'error');
     })
     .verifyOTP(currentEmail, otp);
 }
@@ -451,31 +579,32 @@ document.addEventListener('keydown', function(e) {
   else sendOTP();
 });
 
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 //  SIDEBAR
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 function buildSidebar() {
-  const items = [
-    { id: 'upload',    icon: '📤', label: 'Upload Document' },
-    { id: 'mydocs',    icon: '📁', label: 'Mere Documents' }
+  var items = [
+    { id: 'upload',   icon: '📤', label: 'Upload Document' },
+    { id: 'mydocs',   icon: '📁', label: 'My Documents' }
   ];
   if (SESSION.role === 'team_lead' || SESSION.role === 'super_admin') {
-    items.push({ id: 'alldocs', icon: '📋', label: 'Sabhi Documents' });
+    items.push({ id: 'alldocs', icon: '📋', label: 'All Documents' });
   }
   items.push({ id: 'circulars', icon: '📢', label: 'Circulars' });
 
-  document.getElementById('sidebar').innerHTML = items.map(item =>
-    `<div class="nav-item" id="nav-${item.id}" onclick="showSection('${item.id}')">
-       <span>${item.icon}</span> ${item.label}
-     </div>`
-  ).join('');
+  document.getElementById('sidebar').innerHTML =
+    '<div class="sidebar-section-label">Navigation</div>' +
+    items.map(function(item) {
+      return '<div class="nav-item" id="nav-' + item.id + '" onclick="showSection(\'' + item.id + '\')">' +
+             '<span class="nav-icon">' + item.icon + '</span>' + item.label + '</div>';
+    }).join('');
 }
 
 function showSection(id) {
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  const sec = document.getElementById('sec-' + id);
-  const nav = document.getElementById('nav-' + id);
+  document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+  var sec = document.getElementById('sec-' + id);
+  var nav = document.getElementById('nav-' + id);
   if (sec) sec.classList.add('active');
   if (nav) nav.classList.add('active');
   if (id === 'mydocs')    loadDocs();
@@ -483,20 +612,20 @@ function showSection(id) {
   if (id === 'circulars') loadCirculars();
 }
 
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 //  UPLOAD
-// ════════════════════════════════════════════════
-let selectedFile = null;
+// ══════════════════════════════════════════════════
+var selectedFile = null;
 
 function loadComponents() {
   google.script.run
     .withSuccessHandler(function(res) {
       if (!res.success) return;
-      ['componentSelect','filterComponent','allFilterComponent'].forEach(function(id) {
-        const sel = document.getElementById(id);
+      ['componentSelect', 'filterComponent', 'allFilterComponent'].forEach(function(id) {
+        var sel = document.getElementById(id);
         if (!sel) return;
         res.data.forEach(function(c) {
-          const o = document.createElement('option');
+          var o = document.createElement('option');
           o.value = o.textContent = c;
           sel.appendChild(o);
         });
@@ -505,18 +634,20 @@ function loadComponents() {
 }
 
 function loadSubComponents() {
-  const comp = document.getElementById('componentSelect').value;
-  const sub  = document.getElementById('subComponentSelect');
-  sub.innerHTML = '<option value="">-- Sub-component chunein --</option>';
-  sub.disabled  = !comp;
+  var comp = document.getElementById('componentSelect').value;
+  var sub  = document.getElementById('subComponentSelect');
+  sub.innerHTML = '<option value="">— Select Sub-Component —</option>';
+  sub.disabled = !comp;
   document.getElementById('descriptionInput').value = '';
   if (!comp) return;
   google.script.run
     .withSuccessHandler(function(res) {
       if (!res.success) return;
       res.data.forEach(function(item) {
-        const o = document.createElement('option');
-        o.value = item.sub; o.textContent = item.sub; o.dataset.desc = item.desc;
+        var o = document.createElement('option');
+        o.value = item.sub;
+        o.textContent = item.sub;
+        o.dataset.desc = item.desc;
         sub.appendChild(o);
       });
       sub.disabled = false;
@@ -524,8 +655,8 @@ function loadSubComponents() {
 }
 
 function fillDescription() {
-  const sub = document.getElementById('subComponentSelect');
-  const opt = sub.options[sub.selectedIndex];
+  var sub = document.getElementById('subComponentSelect');
+  var opt = sub.options[sub.selectedIndex];
   if (opt && opt.dataset.desc) document.getElementById('descriptionInput').value = opt.dataset.desc;
 }
 
@@ -537,7 +668,7 @@ function handleDrop(e) {
 }
 function setFile(file) {
   if (file.size > 10 * 1024 * 1024) {
-    showUploadAlert('File 10MB se badi hai. Chhoti file chunein.', 'error');
+    showUploadAlert('File size exceeds 10 MB. Please choose a smaller file.', 'error');
     return;
   }
   selectedFile = file;
@@ -546,45 +677,51 @@ function setFile(file) {
 }
 
 function submitUpload() {
-  const component    = document.getElementById('componentSelect').value;
-  const subComponent = document.getElementById('subComponentSelect').value;
-  const subject      = document.getElementById('subjectInput').value.trim();
-  const description  = document.getElementById('descriptionInput').value.trim();
+  var component    = document.getElementById('componentSelect').value;
+  var subComponent = document.getElementById('subComponentSelect').value;
+  var subject      = document.getElementById('subjectInput').value.trim();
+  var description  = document.getElementById('descriptionInput').value.trim();
   if (!component || !subComponent || !subject || !selectedFile) {
-    showUploadAlert('Saari required fields bharein aur file attach karein.', 'error'); return;
+    showUploadAlert('Please fill all required fields and attach a file.', 'error'); return;
   }
-  const btn = document.getElementById('uploadBtn');
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Upload ho raha hai...';
+  var btn = document.getElementById('uploadBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Uploading…';
 
-  const reader = new FileReader();
+  var reader = new FileReader();
   reader.onload = function(e) {
-    const base64 = e.target.result.split(',')[1];
+    var base64 = e.target.result.split(',')[1];
     google.script.run
       .withSuccessHandler(function(res) {
-        btn.disabled = false; btn.innerHTML = '📤 Upload Karein';
+        btn.disabled = false; btn.innerHTML = '📤&nbsp; Upload Document';
         if (!res.success) { showUploadAlert(res.message, 'error'); return; }
         showUploadAlert('✅ ' + res.data.message + ' | File: ' + res.data.fileName, 'success');
         resetUploadForm();
       })
       .withFailureHandler(function() {
-        btn.disabled = false; btn.innerHTML = '📤 Upload Karein';
-        showUploadAlert('Server error. Dobara try karein.', 'error');
+        btn.disabled = false; btn.innerHTML = '📤&nbsp; Upload Document';
+        showUploadAlert('Server error. Please try again.', 'error');
       })
-      .uploadDocument(SESSION.token, { component, subComponent, subject, description,
-        fileBase64: base64, fileName: selectedFile.name, mimeType: selectedFile.type });
+      .uploadDocument(SESSION.token, {
+        component: component, subComponent: subComponent,
+        subject: subject, description: description,
+        fileBase64: base64, fileName: selectedFile.name, mimeType: selectedFile.type
+      });
   };
   reader.readAsDataURL(selectedFile);
 }
 
 function showUploadAlert(msg, type) {
-  const el = document.getElementById('uploadAlert');
-  el.textContent = msg; el.className = 'alert alert-' + type; el.style.display = 'block';
-  setTimeout(function() { el.style.display = 'none'; }, 7000);
+  var el = document.getElementById('uploadAlert');
+  el.textContent = msg;
+  el.className = 'alert alert-' + type;
+  el.style.display = 'block';
+  if (type === 'success') setTimeout(function() { el.style.display = 'none'; }, 8000);
 }
 
 function resetUploadForm() {
   document.getElementById('componentSelect').value = '';
-  document.getElementById('subComponentSelect').innerHTML = '<option value="">-- Pehle component chunein --</option>';
+  document.getElementById('subComponentSelect').innerHTML = '<option value="">— Select component first —</option>';
   document.getElementById('subComponentSelect').disabled = true;
   document.getElementById('subjectInput').value = '';
   document.getElementById('descriptionInput').value = '';
@@ -593,11 +730,12 @@ function resetUploadForm() {
   selectedFile = null;
 }
 
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 //  DOCUMENTS
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 function loadDocs() {
-  document.getElementById('docsTableBody').innerHTML = '<tr><td colspan="8" class="no-data">Loading...</td></tr>';
+  document.getElementById('docsTableBody').innerHTML =
+    '<tr><td colspan="8" class="no-data">Loading…</td></tr>';
   google.script.run
     .withSuccessHandler(function(res) {
       if (!res.success) return;
@@ -606,7 +744,8 @@ function loadDocs() {
 }
 
 function loadAllDocs() {
-  document.getElementById('allDocsTableBody').innerHTML = '<tr><td colspan="8" class="no-data">Loading...</td></tr>';
+  document.getElementById('allDocsTableBody').innerHTML =
+    '<tr><td colspan="8" class="no-data">Loading…</td></tr>';
   google.script.run
     .withSuccessHandler(function(res) {
       if (!res.success) return;
@@ -625,14 +764,15 @@ function getFilters(prefix) {
 }
 
 function renderDocsTable(tbodyId, rows, showUploader) {
-  const tbody = document.getElementById(tbodyId);
-  const cols   = showUploader ? 8 : 8;
-  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="' + cols + '" class="no-data">Koi document nahi mila.</td></tr>'; return; }
+  var tbody = document.getElementById(tbodyId);
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="no-data">No documents found.</td></tr>'; return;
+  }
   tbody.innerHTML = rows.map(function(r, i) {
-    const canVerify = (SESSION.role === 'team_lead' || SESSION.role === 'super_admin') && r.status === 'pending';
-    const verifyBtns = canVerify
-      ? '<button class="btn btn-success btn-sm" onclick="verifyDoc(\'' + r.doc_id + '\')">✅ Verify</button> ' +
-        '<button class="btn btn-danger btn-sm" onclick="openRejectModal(\'' + r.doc_id + '\')">❌ Reject</button>'
+    var canVerify = (SESSION.role === 'team_lead' || SESSION.role === 'super_admin') && r.status === 'pending';
+    var verifyBtns = canVerify
+      ? ' <button class="btn btn-success btn-sm" onclick="verifyDoc(\'' + r.doc_id + '\')">✅ Verify</button>' +
+        ' <button class="btn btn-danger btn-sm" onclick="openRejectModal(\'' + r.doc_id + '\')">❌ Reject</button>'
       : '';
     return '<tr>' +
       '<td>' + (i + 1) + '</td>' +
@@ -640,49 +780,66 @@ function renderDocsTable(tbodyId, rows, showUploader) {
       '<td>' + r.subject + '</td>' +
       '<td>' + r.component + '</td>' +
       '<td>' + r.sub_component + '</td>' +
-      (showUploader ? '<td>' + r.month + ' ' + r.year + '</td>' : '<td>' + r.month + '</td><td>' + r.year + '</td>') +
+      (showUploader
+        ? '<td>' + r.month + ' ' + r.year + '</td>'
+        : '<td>' + r.month + '</td><td>' + r.year + '</td>') +
       '<td>' + statusBadge(r.status) + '</td>' +
-      '<td><a href="' + toDownloadUrl(r.drive_link) + '" target="_blank" class="btn btn-outline btn-sm">⬇ Download</a> ' + verifyBtns + '</td>' +
+      '<td>' +
+        '<a href="' + toDownloadUrl(r.drive_link) + '" target="_blank" class="btn btn-outline btn-sm">⬇ Download</a>' +
+        verifyBtns +
+      '</td>' +
       '</tr>';
   }).join('');
 }
 
 function toDownloadUrl(url) {
   if (!url) return '#';
-  // Already download URL
   if (url.includes('export=download')) return url;
-  // Extract file ID from any Drive URL format
   var match = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
   if (match) return 'https://drive.google.com/uc?export=download&id=' + match[1];
   return url;
 }
 
 function statusBadge(s) {
-  var map = { pending:'badge-pending,Pending', tl_verified:'badge-verified,TL Verified',
-    tl_rejected:'badge-rejected,TL Rejected', admin_approved:'badge-approved,Approved',
-    admin_rejected:'badge-rejected,Rejected', archived:'badge-archived,Archived' };
-  var parts = (map[s] || 'badge-pending,' + s).split(',');
+  var map = {
+    pending:        'badge-pending,Pending',
+    tl_verified:    'badge-verified,TL Verified',
+    tl_rejected:    'badge-rejected,TL Rejected',
+    admin_approved: 'badge-approved,Approved',
+    admin_rejected: 'badge-rejected,Rejected',
+    archived:       'badge-archived,Archived'
+  };
+  var parts = (map[s] || ('badge-pending,' + s)).split(',');
   return '<span class="badge ' + parts[0] + '">' + parts[1] + '</span>';
 }
 
 function clearFilters() {
-  ['filterYear','filterMonth','filterComponent','filterStatus'].forEach(function(id) { document.getElementById(id).value = ''; });
-  document.getElementById('filterSearch').value = ''; loadDocs();
+  ['filterYear','filterMonth','filterComponent','filterStatus'].forEach(function(id) {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('filterSearch').value = '';
+  loadDocs();
 }
 function clearAllFilters() {
-  ['allFilterYear','allFilterMonth','allFilterComponent','allFilterStatus'].forEach(function(id) { document.getElementById(id).value = ''; });
-  document.getElementById('allFilterSearch').value = ''; loadAllDocs();
+  ['allFilterYear','allFilterMonth','allFilterComponent','allFilterStatus'].forEach(function(id) {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('allFilterSearch').value = '';
+  loadAllDocs();
 }
 
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 //  VERIFY / REJECT
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 var rejectDocId = null;
 
 function verifyDoc(docId) {
-  if (!confirm('Is document ko verify karna chahte hain?')) return;
+  if (!confirm('Verify this document?')) return;
   google.script.run
-    .withSuccessHandler(function(res) { alert(res.success ? '✅ Document verified!' : res.message); loadAllDocs(); })
+    .withSuccessHandler(function(res) {
+      alert(res.success ? '✅ Document verified successfully!' : res.message);
+      loadAllDocs();
+    })
     .verifyDocument(SESSION.token, docId);
 }
 
@@ -691,20 +848,28 @@ function openRejectModal(docId) {
   document.getElementById('rejectRemark').value = '';
   document.getElementById('rejectModal').classList.add('open');
 }
-function closeRejectModal() { document.getElementById('rejectModal').classList.remove('open'); rejectDocId = null; }
+function closeRejectModal() {
+  document.getElementById('rejectModal').classList.remove('open');
+  rejectDocId = null;
+}
 function confirmReject() {
   var remark = document.getElementById('rejectRemark').value.trim();
-  if (!remark) { alert('Rejection reason zaroori hai.'); return; }
+  if (!remark) { alert('Please enter a rejection reason.'); return; }
   google.script.run
-    .withSuccessHandler(function(res) { closeRejectModal(); alert(res.success ? '❌ Document rejected.' : res.message); loadAllDocs(); })
+    .withSuccessHandler(function(res) {
+      closeRejectModal();
+      alert(res.success ? '❌ Document rejected.' : res.message);
+      loadAllDocs();
+    })
     .rejectDocument(SESSION.token, rejectDocId, remark);
 }
 
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 //  CIRCULARS
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 function loadCirculars() {
-  document.getElementById('circularsTableBody').innerHTML = '<tr><td colspan="6" class="no-data">Loading...</td></tr>';
+  document.getElementById('circularsTableBody').innerHTML =
+    '<tr><td colspan="6" class="no-data">Loading…</td></tr>';
   google.script.run
     .withSuccessHandler(function(res) { if (!res.success) return; renderCirculars(res.data); })
     .getCirculars(SESSION.token);
@@ -712,42 +877,53 @@ function loadCirculars() {
 
 function renderCirculars(rows) {
   var tbody = document.getElementById('circularsTableBody');
-  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="6" class="no-data">Koi circular nahi hai.</td></tr>'; return; }
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="no-data">No circulars available.</td></tr>'; return;
+  }
   tbody.innerHTML = rows.map(function(r, i) {
     var ackBtn = '';
     if (SESSION.role === 'manager') {
       ackBtn = r.acknowledged
-        ? '<span style="color:#2e7d32;font-weight:600">✅ Acknowledged</span>'
-        : '<button class="btn btn-success btn-sm" onclick="acknowledgeCircular(\'' + r.circular_id + '\', this)">✅ Maine padh liya</button>';
+        ? '<span style="color:#2e7d32;font-weight:600;font-size:0.85rem">✅ Acknowledged</span>'
+        : '<button class="btn btn-success btn-sm" onclick="acknowledgeCircular(\'' + r.circular_id + '\', this)">✅ Mark as Read</button>';
     } else {
-      ackBtn = '<span style="font-size:0.8rem;color:#757575">' + r.ack_count + '/' + r.total_managers + ' acknowledged</span>';
+      ackBtn = '<span style="font-size:0.8rem;color:#757575">' + r.ack_count + ' / ' + r.total_managers + ' acknowledged</span>';
     }
     return '<tr>' +
       '<td>' + (i + 1) + '</td>' +
       '<td>' + r.title + '</td>' +
       '<td>' + (r.ref_number || '—') + '</td>' +
       '<td>' + r.uploaded_at + '</td>' +
-      '<td>' + (r.acknowledged ? '<span class="badge badge-verified">Acknowledged</span>' : '<span class="badge badge-pending">Pending</span>') + '</td>' +
-      '<td><a href="' + toDownloadUrl(r.drive_link) + '" target="_blank" class="btn btn-outline btn-sm">⬇ Download</a> ' + ackBtn + '</td>' +
+      '<td>' + (r.acknowledged
+        ? '<span class="badge badge-verified">Acknowledged</span>'
+        : '<span class="badge badge-pending">Pending</span>') + '</td>' +
+      '<td>' +
+        '<a href="' + toDownloadUrl(r.drive_link) + '" target="_blank" class="btn btn-outline btn-sm">⬇ Download</a> ' +
+        ackBtn +
+      '</td>' +
       '</tr>';
   }).join('');
 }
 
 function acknowledgeCircular(circularId, btn) {
-  btn.disabled = true; btn.textContent = '...';
+  btn.disabled = true; btn.textContent = '…';
   google.script.run
     .withSuccessHandler(function(res) {
-      if (res.success) { btn.outerHTML = '<span style="color:#2e7d32;font-weight:600">✅ Acknowledged</span>'; }
-      else { btn.disabled = false; btn.textContent = '✅ Maine padh liya'; alert(res.message); }
-    }).acknowledgeCircular(SESSION.token, circularId);
+      if (res.success) {
+        btn.outerHTML = '<span style="color:#2e7d32;font-weight:600;font-size:0.85rem">✅ Acknowledged</span>';
+      } else {
+        btn.disabled = false; btn.textContent = '✅ Mark as Read'; alert(res.message);
+      }
+    })
+    .acknowledgeCircular(SESSION.token, circularId);
 }
 
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 //  HELPERS
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
 function populateYearFilters() {
   var y = new Date().getFullYear();
-  ['filterYear','allFilterYear'].forEach(function(id) {
+  ['filterYear', 'allFilterYear'].forEach(function(id) {
     var sel = document.getElementById(id);
     if (!sel) return;
     [y, y-1, y-2].forEach(function(yr) {
@@ -759,7 +935,7 @@ function populateYearFilters() {
 }
 
 function logout() {
-  if (!confirm('Logout karna chahte hain?')) return;
+  if (!confirm('Are you sure you want to logout?')) return;
   google.script.run.withSuccessHandler(function() {
     sessionStorage.clear();
     SESSION = { token: null, role: null, name: null };
@@ -771,9 +947,9 @@ function logout() {
   }).logoutUser(SESSION.token);
 }
 
-// ════════════════════════════════════════════════
-//  START
-// ════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════
 initApp();
 </script>
 </body>
