@@ -11,7 +11,8 @@ function setupAllSheets() {
       'doc_id', 'uploader_email', 'uploader_name', 'component', 'sub_component',
       'subject', 'description', 'file_name', 'drive_link', 'year', 'month',
       'status', 'tl_verified_by', 'tl_verified_at', 'tl_remark',
-      'admin_approved_by', 'admin_approved_at', 'admin_remark', 'uploaded_at'
+      'admin_approved_by', 'admin_approved_at', 'admin_remark', 'uploaded_at',
+      'target_component'
     ],
     'Dropdowns': [
       'component', 'sub_component', 'description', 'template_link'

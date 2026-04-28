@@ -57,10 +57,10 @@ function uploadDocument(token, payload) {
     const session = requireAuth(token);
 
     const { component, subComponent, subject, description,
-            fileBase64, fileName, mimeType } = payload;
+            fileBase64, fileName, mimeType, targetComponent } = payload;
 
     if (!component || !subComponent || !subject || !fileBase64 || !fileName) {
-      return errorResponse('Saari required fields bharein.');
+      return errorResponse('Please fill all required fields.');
     }
 
     // Get file extension
@@ -70,10 +70,14 @@ function uploadDocument(token, payload) {
       return errorResponse('Allowed formats: PDF, Word, Excel, CSV, PowerPoint, Image (JPG/PNG)');
     }
 
-    // 10MB limit (base64 string length check: 10MB * 1.37 ≈ 13.7MB base64)
+    // 10MB limit
     if (fileBase64.length > 13700000) {
-      return errorResponse('File size 10MB se zyada hai. Chhoti file upload karein.');
+      return errorResponse('File size exceeds 10MB. Please upload a smaller file.');
     }
+
+    // targetComponent: only TL and admin can set it; managers always get ''
+    const isPrivileged = (session.role === CONFIG.ROLES.TEAM_LEAD || session.role === CONFIG.ROLES.SUPER_ADMIN);
+    const resolvedTarget = isPrivileged ? (targetComponent || '') : '';
 
     // Auto file name
     const autoFileName = buildFileName(component, subComponent, session.name, ext);
@@ -85,49 +89,64 @@ function uploadDocument(token, payload) {
     const driveResult = saveFileToDrive(fileBase64, mimeType, autoFileName, folderId);
 
     // Save entry in Documents sheet
-    const now  = new Date();
+    const now   = new Date();
     const docId = generateDocId();
 
     appendRow(CONFIG.TABS.DOCUMENTS, {
-      doc_id:           docId,
-      uploader_email:   session.email,
-      uploader_name:    session.name,
-      component:        component,
-      sub_component:    subComponent,
-      subject:          subject,
-      description:      description || '',
-      file_name:        autoFileName,
-      drive_link:       driveResult.fileUrl,
-      year:             getYear(now),
-      month:            getMonthName(now),
-      status:           CONFIG.STATUS.PENDING,
-      tl_verified_by:   '',
-      tl_verified_at:   '',
-      tl_remark:        '',
-      admin_approved_by:'',
-      admin_approved_at:'',
-      admin_remark:     '',
-      uploaded_at:      formatDate(now)
+      doc_id:            docId,
+      uploader_email:    session.email,
+      uploader_name:     session.name,
+      component:         component,
+      sub_component:     subComponent,
+      subject:           subject,
+      description:       description || '',
+      file_name:         autoFileName,
+      drive_link:        driveResult.fileUrl,
+      year:              getYear(now),
+      month:             getMonthName(now),
+      status:            CONFIG.STATUS.PENDING,
+      tl_verified_by:    '',
+      tl_verified_at:    '',
+      tl_remark:         '',
+      admin_approved_by: '',
+      admin_approved_at: '',
+      admin_remark:      '',
+      uploaded_at:       formatDate(now),
+      target_component:  resolvedTarget
     });
 
     writeAuditLog(session.email, session.name, 'UPLOADED', docId, autoFileName);
 
-    // Notify Team Lead
-    _notifyTeamLead(session.name, subject, component, subComponent);
+    // Notify Team Lead (only when a manager uploads)
+    if (session.role === CONFIG.ROLES.MANAGER) {
+      _notifyTeamLead(session.name, subject, component, subComponent);
+    }
 
     return successResponse({
-      message:  'Document successfully upload ho gaya!',
+      message:  'Document uploaded successfully!',
       fileName: autoFileName,
       docId:    docId
     });
 
   } catch (e) {
-    console.error('uploadDocument error — ' + e.message + ' | Stack: ' + e.stack);
-    return errorResponse('Upload mein problem aayi: ' + e.message);
+    console.error('uploadDocument error: ' + e.message + ' | Stack: ' + e.stack);
+    return errorResponse('Upload failed: ' + e.message);
   }
 }
 
-// Fetch documents for current user (manager sees own, TL/Admin see all)
+// Returns all component names (for target_component dropdown — used by TL/Admin)
+function getAllComponents(token) {
+  try {
+    requireAuth(token);
+    const rows = getSheetData(CONFIG.TABS.DROPDOWNS);
+    const components = [...new Set(rows.map(r => r.component))].filter(Boolean);
+    return successResponse(components);
+  } catch (e) {
+    return errorResponse(e.message);
+  }
+}
+
+// Fetch documents for current user (manager sees own + shared, TL/Admin see all)
 function getDocuments(token, filters) {
   try {
     const session = requireAuth(token);
@@ -135,7 +154,17 @@ function getDocuments(token, filters) {
 
     // Role-based filter
     if (session.role === CONFIG.ROLES.MANAGER) {
-      rows = rows.filter(r => r.uploader_email === session.email);
+      const userAccess = _getUserComponentAccess(session.email); // e.g. 'Civil'
+      rows = rows.filter(r => {
+        // Own uploads — always visible
+        if (r.uploader_email === session.email) return true;
+        // Shared by TL/Admin — visible if target matches user's component or is ALL
+        const tc = (r.target_component || '').trim().toUpperCase();
+        if (tc === 'ALL') return true;
+        if (tc && userAccess !== 'ALL' && tc === userAccess.toUpperCase()) return true;
+        if (tc && userAccess === 'ALL') return true;
+        return false;
+      });
     }
 
     // Apply optional filters
@@ -169,12 +198,15 @@ function _notifyTeamLead(uploaderName, subject, component, subComponent) {
     tls.forEach(tl => {
       GmailApp.sendEmail(
         tl.email,
-        CONFIG.SYSTEM_NAME + ' — Naya Document Upload',
-        'Namaste ' + tl.name + ',\n\n' +
-        uploaderName + ' ne ek naya document upload kiya hai.\n\n' +
-        'Subject: ' + subject + '\n' +
-        'Component: ' + component + ' > ' + subComponent + '\n\n' +
-        'Please verify karein.\n\n— ' + CONFIG.SYSTEM_NAME
+        'Document Management System: New Document Uploaded',
+        'Dear ' + tl.name + ',\n\n' +
+        uploaderName + ' has uploaded a new document for your review.\n\n' +
+        'Subject   : ' + subject + '\n' +
+        'Component : ' + component + ' > ' + subComponent + '\n\n' +
+        'Please log in to verify the document.\n\n' +
+        'Regards,\n' +
+        'Technical Assistant Unit\n' +
+        'Educate Girls'
       );
     });
   } catch (e) {

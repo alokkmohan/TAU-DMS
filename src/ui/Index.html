@@ -625,9 +625,17 @@ function showSection(id) {
 var selectedFile = null;
 
 function loadComponents() {
+  // Show 'Share with' dropdown for TL and Admin only
+  var shareGroup = document.getElementById('shareWithGroup');
+  if (shareGroup) {
+    shareGroup.style.display =
+      (SESSION.role === 'team_lead' || SESSION.role === 'super_admin') ? 'block' : 'none';
+  }
+
   google.script.run
     .withSuccessHandler(function(res) {
       if (!res.success) return;
+      // Populate component filter dropdowns
       ['componentSelect', 'filterComponent', 'allFilterComponent'].forEach(function(id) {
         var sel = document.getElementById(id);
         if (!sel) return;
@@ -637,6 +645,15 @@ function loadComponents() {
           sel.appendChild(o);
         });
       });
+      // Populate 'Share with' dropdown (TL/Admin only)
+      var tsel = document.getElementById('targetComponentSelect');
+      if (tsel) {
+        res.data.forEach(function(c) {
+          var o = document.createElement('option');
+          o.value = c; o.textContent = c;
+          tsel.appendChild(o);
+        });
+      }
     }).getComponents(SESSION.token);
 }
 
@@ -698,6 +715,8 @@ function submitUpload() {
   var reader = new FileReader();
   reader.onload = function(e) {
     var base64 = e.target.result.split(',')[1];
+    var targetComponent = document.getElementById('targetComponentSelect')
+      ? document.getElementById('targetComponentSelect').value : '';
     google.script.run
       .withSuccessHandler(function(res) {
         btn.disabled = false; btn.innerHTML = '📤&nbsp; Upload Document';
@@ -712,7 +731,8 @@ function submitUpload() {
       .uploadDocument(SESSION.token, {
         component: component, subComponent: subComponent,
         subject: subject, description: description,
-        fileBase64: base64, fileName: selectedFile.name, mimeType: selectedFile.type
+        fileBase64: base64, fileName: selectedFile.name, mimeType: selectedFile.type,
+        targetComponent: targetComponent
       });
   };
   reader.readAsDataURL(selectedFile);

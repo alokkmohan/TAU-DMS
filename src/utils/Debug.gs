@@ -53,6 +53,24 @@ function debugCheckUsersSheet() {
   });
 }
 
+// ── Run once to add target_component column header to Documents sheet ──
+function addTargetComponentColumn() {
+  const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.TABS.DOCUMENTS);
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  if (headers.includes('target_component')) {
+    Logger.log('Column already exists.');
+    return;
+  }
+  const nextCol = sheet.getLastColumn() + 1;
+  sheet.getRange(1, nextCol).setValue('target_component');
+  sheet.getRange(1, nextCol)
+    .setBackground('#1a237e')
+    .setFontColor('#ffffff')
+    .setFontWeight('bold');
+  Logger.log('✅ target_component column added at column ' + nextCol);
+}
+
 // ── Run once to add a new user ──
 function addUser_GauravMishra() {
   const sheet = getSheet(CONFIG.TABS.USERS);
