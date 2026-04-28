@@ -1,9 +1,17 @@
-// Called from Dashboard — returns component list for dropdown
+// Called from Dashboard — returns component list filtered by user's access
 function getComponents(token) {
   try {
-    requireAuth(token);
-    const rows = getSheetData(CONFIG.TABS.DROPDOWNS);
-    const components = [...new Set(rows.map(r => r.component))].filter(Boolean);
+    const session = requireAuth(token);
+    const rows    = getSheetData(CONFIG.TABS.DROPDOWNS);
+    const access  = _getUserComponentAccess(session.email);
+
+    let components = [...new Set(rows.map(r => r.component))].filter(Boolean);
+
+    if (access !== 'ALL') {
+      const allowed = access.split(',').map(s => s.trim().toLowerCase());
+      components = components.filter(c => allowed.includes(c.toLowerCase()));
+    }
+
     return successResponse(components);
   } catch (e) {
     return errorResponse(e.message);
@@ -13,7 +21,17 @@ function getComponents(token) {
 // Called when component selected — returns sub-components
 function getSubComponents(token, component) {
   try {
-    requireAuth(token);
+    const session = requireAuth(token);
+    const access  = _getUserComponentAccess(session.email);
+
+    // Verify user has access to this component
+    if (access !== 'ALL') {
+      const allowed = access.split(',').map(s => s.trim().toLowerCase());
+      if (!allowed.includes(component.toLowerCase())) {
+        return errorResponse('Is component ka access nahi hai.');
+      }
+    }
+
     const rows = getSheetData(CONFIG.TABS.DROPDOWNS);
     const subs = rows
       .filter(r => r.component === component)
@@ -22,6 +40,15 @@ function getSubComponents(token, component) {
   } catch (e) {
     return errorResponse(e.message);
   }
+}
+
+function _getUserComponentAccess(email) {
+  const users = getSheetData(CONFIG.TABS.USERS);
+  const user  = users.find(u => u.email === email);
+  if (!user) return 'ALL';
+  const access = user.component_access || '';
+  if (!access || access.toString().trim().toUpperCase() === 'ALL') return 'ALL';
+  return access.toString().trim();
 }
 
 // Main upload function

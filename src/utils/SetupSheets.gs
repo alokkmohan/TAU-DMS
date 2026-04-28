@@ -5,7 +5,7 @@ function setupAllSheets() {
 
   const schema = {
     'Users': [
-      'email', 'name', 'role', 'folder_id', 'created_at', 'is_active'
+      'email', 'name', 'role', 'component_access', 'folder_id', 'created_at', 'is_active'
     ],
     'Documents': [
       'doc_id', 'uploader_email', 'uploader_name', 'component', 'sub_component',
@@ -91,6 +91,7 @@ function _seedInitialUser(sheet) {
     'alok.mohan@educategirls.ngo',
     'Alok Mohan',
     'super_admin',
+    'ALL',
     '',
     now,
     true
