@@ -1,13 +1,11 @@
 // ─────────────────────────────────────────────────────────────
-//  DMS — TAU  |  GAS REST API  (frontend lives on GitHub Pages)
+//  DMS — TAU  |  GAS REST API  (frontend on GitHub Pages)
 // ─────────────────────────────────────────────────────────────
 
 function doPost(e) {
   try {
     const payload = JSON.parse(e.postData.contents);
-    const action  = payload.action;
-    const params  = payload.params || [];
-    const result  = _route(action, params);
+    const result  = _route(payload.action, payload.params || []);
     return _json(result);
   } catch (err) {
     return _json({ success: false, message: 'Server error: ' + err.message });
@@ -15,27 +13,35 @@ function doPost(e) {
 }
 
 function doGet(e) {
-  return _json({ status: 'ok', app: 'DMS — TAU', version: '2.0' });
+  return _json({ status: 'ok', app: 'DMS — TAU', version: '2.1' });
 }
 
-function _route(action, params) {
+function _route(action, p) {
   switch (action) {
-    // ── Auth ──
-    case 'sendOTP':              return sendOTP(params[0]);
-    case 'verifyOTP':            return verifyOTP(params[0], params[1]);
-    case 'logoutUser':           return logoutUser(params[0]);
-    // ── Upload / Documents ──
-    case 'getComponents':        return getComponents(params[0]);
-    case 'getSubComponents':     return getSubComponents(params[0], params[1]);
-    case 'getAllComponents':      return getAllComponents(params[0]);
-    case 'uploadDocument':       return uploadDocument(params[0], params[1]);
-    case 'getDocuments':         return getDocuments(params[0], params[1]);
-    // ── Verify ──
-    case 'verifyDocument':       return verifyDocument(params[0], params[1]);
-    case 'rejectDocument':       return rejectDocument(params[0], params[1], params[2]);
-    // ── Circulars ──
-    case 'getCirculars':         return getCirculars(params[0]);
-    case 'acknowledgeCircular':  return acknowledgeCircular(params[0], params[1]);
+    // ── Auth ──────────────────────────────────
+    case 'sendOTP':           return sendOTP(p[0]);
+    case 'verifyOTP':         return verifyOTP(p[0], p[1]);
+    case 'logoutUser':        return logoutUser(p[0]);
+
+    // ── Upload / Documents ────────────────────
+    case 'getComponents':     return getComponents(p[0]);
+    case 'getSubComponents':  return getSubComponents(p[0], p[1]);
+    case 'getAllComponents':   return getAllComponents(p[0]);
+    case 'uploadDocument':    return uploadDocument(p[0], p[1]);
+    case 'getDocuments':      return getDocuments(p[0], p[1]);
+    case 'deleteDocument':    return deleteDocument(p[0], p[1]);
+    case 'updateDocument':    return updateDocument(p[0], p[1], p[2]);
+
+    // ── Verify / Approve ─────────────────────
+    case 'verifyDocument':    return verifyDocument(p[0], p[1]);
+    case 'rejectDocument':    return rejectDocument(p[0], p[1], p[2]);
+    case 'approveDocument':   return approveDocument(p[0], p[1]);
+    case 'rejectApproval':    return rejectApproval(p[0], p[1], p[2]);
+
+    // ── Circulars ─────────────────────────────
+    case 'getCirculars':          return getCirculars(p[0]);
+    case 'acknowledgeCircular':   return acknowledgeCircular(p[0], p[1]);
+
     default:
       return { success: false, message: 'Unknown action: ' + action };
   }

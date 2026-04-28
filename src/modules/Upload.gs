@@ -1,4 +1,4 @@
-// Called from Dashboard — returns component list filtered by user's access
+// ── Component dropdowns (filtered by user's component_access) ──
 function getComponents(token) {
   try {
     const session = requireAuth(token);
@@ -6,29 +6,25 @@ function getComponents(token) {
     const access  = _getUserComponentAccess(session.email);
 
     let components = [...new Set(rows.map(r => r.component))].filter(Boolean);
-
     if (access !== 'ALL') {
       const allowed = access.split(',').map(s => s.trim().toLowerCase());
       components = components.filter(c => allowed.includes(c.toLowerCase()));
     }
-
     return successResponse(components);
   } catch (e) {
     return errorResponse(e.message);
   }
 }
 
-// Called when component selected — returns sub-components
 function getSubComponents(token, component) {
   try {
     const session = requireAuth(token);
     const access  = _getUserComponentAccess(session.email);
 
-    // Verify user has access to this component
     if (access !== 'ALL') {
       const allowed = access.split(',').map(s => s.trim().toLowerCase());
       if (!allowed.includes(component.toLowerCase())) {
-        return errorResponse('Is component ka access nahi hai.');
+        return errorResponse('You do not have access to this component.');
       }
     }
 
@@ -42,55 +38,87 @@ function getSubComponents(token, component) {
   }
 }
 
+// All components — for target_component dropdown (TL / Admin)
+function getAllComponents(token) {
+  try {
+    requireAuth(token);
+    const rows = getSheetData(CONFIG.TABS.DROPDOWNS);
+    const components = [...new Set(rows.map(r => r.component))].filter(Boolean);
+    return successResponse(components);
+  } catch (e) {
+    return errorResponse(e.message);
+  }
+}
+
 function _getUserComponentAccess(email) {
-  const users = getSheetData(CONFIG.TABS.USERS);
-  const user  = users.find(u => u.email === email);
+  const users  = getSheetData(CONFIG.TABS.USERS);
+  const user   = users.find(u => u.email === email);
   if (!user) return 'ALL';
   const access = user.component_access || '';
   if (!access || access.toString().trim().toUpperCase() === 'ALL') return 'ALL';
   return access.toString().trim();
 }
 
-// Main upload function
+// ── Main upload ────────────────────────────────────────────────
 function uploadDocument(token, payload) {
   try {
     const session = requireAuth(token);
 
     const { component, subComponent, subject, description,
-            fileBase64, fileName, mimeType, targetComponent } = payload;
+            fileBase64, fileName, mimeType, targetComponent,
+            targetAudience } = payload;
 
     if (!component || !subComponent || !subject || !fileBase64 || !fileName) {
       return errorResponse('Please fill all required fields.');
     }
 
-    // Get file extension
-    const ext = fileName.split('.').pop().toLowerCase();
-    const allowedExt = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'ppt', 'pptx', 'jpg', 'jpeg', 'png'];
+    const ext        = fileName.split('.').pop().toLowerCase();
+    const allowedExt = ['pdf','doc','docx','xls','xlsx','csv','ppt','pptx','jpg','jpeg','png'];
     if (!allowedExt.includes(ext)) {
       return errorResponse('Allowed formats: PDF, Word, Excel, CSV, PowerPoint, Image (JPG/PNG)');
     }
-
-    // 10MB limit
     if (fileBase64.length > 13700000) {
       return errorResponse('File size exceeds 10MB. Please upload a smaller file.');
     }
 
-    // targetComponent: only TL and admin can set it; managers always get ''
-    const isPrivileged = (session.role === CONFIG.ROLES.TEAM_LEAD || session.role === CONFIG.ROLES.SUPER_ADMIN);
+    const isManager    = session.role === CONFIG.ROLES.MANAGER;
+    const isPrivileged = !isManager;
+
+    // Determine document state/audience based on role
+    let docState = '';
+    const users    = getSheetData(CONFIG.TABS.USERS);
+    const uploader = users.find(u => u.email === session.email);
+
+    if (session.role === CONFIG.ROLES.MANAGER ||
+        session.role === CONFIG.ROLES.TEAM_LEAD ||
+        session.role === CONFIG.ROLES.STATE_LEAD) {
+      // Own state — so state-level visibility
+      docState = uploader ? (uploader.state || '') : '';
+
+    } else if (session.role === CONFIG.ROLES.PROJECT_MANAGER) {
+      // Group-level visibility (e.g. GROUP_6A)
+      docState = session.state_group ? ('GROUP_' + session.state_group) : '';
+
+    } else if (session.role === CONFIG.ROLES.CEO || session.role === CONFIG.ROLES.SUPER_ADMIN) {
+      // Admin selects audience: ALL / GROUP_6A / GROUP_6B / specific state
+      docState = targetAudience || 'ALL';
+    }
+
+    // Optional component-level sharing
     const resolvedTarget = isPrivileged ? (targetComponent || '') : '';
 
     // Auto file name
     const autoFileName = buildFileName(component, subComponent, session.name, ext);
 
-    // Get/create Drive folder for this user
-    const folderId = getUploaderFolder(session.name);
-
-    // Save to Drive
+    // Drive folder: Root / UploaderName / Year / Month
+    const folderId    = getUploaderFolder(session.name);
     const driveResult = saveFileToDrive(fileBase64, mimeType, autoFileName, folderId);
 
-    // Save entry in Documents sheet
     const now   = new Date();
     const docId = generateDocId();
+
+    // Privileged roles bypass the approval workflow
+    const status = isManager ? CONFIG.STATUS.PENDING : CONFIG.STATUS.ADMIN_APPROVED;
 
     appendRow(CONFIG.TABS.DOCUMENTS, {
       doc_id:            docId,
@@ -104,22 +132,23 @@ function uploadDocument(token, payload) {
       drive_link:        driveResult.fileUrl,
       year:              getYear(now),
       month:             getMonthName(now),
-      status:            CONFIG.STATUS.PENDING,
-      tl_verified_by:    '',
-      tl_verified_at:    '',
+      status:            status,
+      tl_verified_by:    isPrivileged ? session.name : '',
+      tl_verified_at:    isPrivileged ? formatDate(now) : '',
       tl_remark:         '',
-      admin_approved_by: '',
-      admin_approved_at: '',
+      admin_approved_by: isPrivileged ? session.name : '',
+      admin_approved_at: isPrivileged ? formatDate(now) : '',
       admin_remark:      '',
       uploaded_at:       formatDate(now),
-      target_component:  resolvedTarget
+      target_component:  resolvedTarget,
+      state:             docState
     });
 
     writeAuditLog(session.email, session.name, 'UPLOADED', docId, autoFileName);
 
-    // Notify Team Lead (only when a manager uploads)
-    if (session.role === CONFIG.ROLES.MANAGER) {
-      _notifyTeamLead(session.name, subject, component, subComponent);
+    // Notify TL only when a manager uploads
+    if (isManager) {
+      _notifyTeamLead(session.name, subject, component, subComponent, docState);
     }
 
     return successResponse({
@@ -129,72 +158,179 @@ function uploadDocument(token, payload) {
     });
 
   } catch (e) {
-    console.error('uploadDocument error: ' + e.message + ' | Stack: ' + e.stack);
+    console.error('uploadDocument error: ' + e.message + ' | ' + e.stack);
     return errorResponse('Upload failed: ' + e.message);
   }
 }
 
-// Returns all component names (for target_component dropdown — used by TL/Admin)
-function getAllComponents(token) {
-  try {
-    requireAuth(token);
-    const rows = getSheetData(CONFIG.TABS.DROPDOWNS);
-    const components = [...new Set(rows.map(r => r.component))].filter(Boolean);
-    return successResponse(components);
-  } catch (e) {
-    return errorResponse(e.message);
-  }
-}
-
-// Fetch documents for current user (manager sees own + shared, TL/Admin see all)
+// ── Fetch documents (role + state filtered) ────────────────────
 function getDocuments(token, filters) {
   try {
-    const session = requireAuth(token);
-    let rows = getSheetData(CONFIG.TABS.DOCUMENTS);
+    const session  = requireAuth(token);
+    let   rows     = getSheetData(CONFIG.TABS.DOCUMENTS);
+    const role     = session.role;
+    const myState  = (session.state || '').toLowerCase();
+    const myGroup  = session.state_group || getStateGroup(session.state || '');
 
-    // Role-based filter
-    if (session.role === CONFIG.ROLES.MANAGER) {
-      const userAccess = _getUserComponentAccess(session.email); // e.g. 'Civil'
-      rows = rows.filter(r => {
-        // Own uploads — always visible
+    // ── Visibility helper ──────────────────────────────────────
+    function isVisible(r) {
+      const docState = (r.state || '').trim();
+
+      if (role === CONFIG.ROLES.MANAGER) {
+        // 1. Own uploads
         if (r.uploader_email === session.email) return true;
-        // Shared by TL/Admin — visible if target matches user's component or is ALL
+        // 2. Docs shared by component (target_component)
+        const userAccess = _getUserComponentAccess(session.email);
         const tc = (r.target_component || '').trim().toUpperCase();
         if (tc === 'ALL') return true;
         if (tc && userAccess !== 'ALL' && tc === userAccess.toUpperCase()) return true;
         if (tc && userAccess === 'ALL') return true;
+        // 3. Privileged-role broadcast docs visible to this manager
+        if (docState === 'ALL') return true;
+        if (myGroup && docState === 'GROUP_' + myGroup) return true;
+        if (docState && docState.toLowerCase() === myState) return true;
         return false;
-      });
+      }
+
+      if (role === CONFIG.ROLES.TEAM_LEAD || role === CONFIG.ROLES.STATE_LEAD) {
+        // All docs in their state + group broadcasts + global
+        if (docState === 'ALL') return true;
+        if (myGroup && docState === 'GROUP_' + myGroup) return true;
+        return docState.toLowerCase() === myState;
+      }
+
+      if (role === CONFIG.ROLES.PROJECT_MANAGER) {
+        // All docs in their state_group states + their own group broadcast + global
+        const groupStates = (CONFIG.STATE_GROUPS[myGroup] || []).map(s => s.toLowerCase());
+        if (docState === 'ALL') return true;
+        if (docState === 'GROUP_' + myGroup) return true;
+        return groupStates.includes(docState.toLowerCase());
+      }
+
+      // CEO / super_admin → see everything
+      return true;
     }
 
-    // Apply optional filters
+    rows = rows.filter(isVisible);
+
+    // Optional filters
     if (filters) {
-      if (filters.year)      rows = rows.filter(r => r.year === filters.year);
-      if (filters.month)     rows = rows.filter(r => r.month === filters.month);
+      if (filters.year)      rows = rows.filter(r => r.year      === filters.year);
+      if (filters.month)     rows = rows.filter(r => r.month     === filters.month);
       if (filters.component) rows = rows.filter(r => r.component === filters.component);
-      if (filters.status)    rows = rows.filter(r => r.status === filters.status);
+      if (filters.status)    rows = rows.filter(r => r.status    === filters.status);
+      if (filters.state)     rows = rows.filter(r => r.state     === filters.state);
       if (filters.search) {
         const q = filters.search.toLowerCase();
         rows = rows.filter(r =>
-          r.subject.toLowerCase().includes(q) ||
-          r.file_name.toLowerCase().includes(q)
+          (r.subject   || '').toLowerCase().includes(q) ||
+          (r.file_name || '').toLowerCase().includes(q)
         );
       }
     }
 
-    // Newest first
     rows.reverse();
     return successResponse(rows);
+  } catch (e) {
+    return errorResponse(e.message);
+  }
+}
+
+// ── Delete document (only allowed if status is 'pending') ──────
+function deleteDocument(token, docId) {
+  try {
+    const session = requireAuth(token);
+
+    const rows   = getSheetData(CONFIG.TABS.DOCUMENTS);
+    const doc    = rows.find(r => r.doc_id === docId);
+    if (!doc) return errorResponse('Document not found.');
+
+    // Only uploader or super_admin can delete
+    if (doc.uploader_email !== session.email && session.role !== CONFIG.ROLES.SUPER_ADMIN) {
+      return errorResponse('You can only delete your own documents.');
+    }
+
+    // Lock rule: managers cannot delete after TL has acted
+    // Privileged roles (TL/SL/PM/CEO) bypass this — their uploads have no approval workflow
+    const isManagerDoc = session.role === CONFIG.ROLES.MANAGER;
+    if (isManagerDoc && CONFIG.LOCKED_STATUSES.includes(doc.status)) {
+      return errorResponse(
+        'This document is locked and cannot be deleted. ' +
+        'Once a Team Lead has verified or rejected a document, it becomes a permanent record.'
+      );
+    }
+
+    // Find and delete the row in Sheets
+    const sheet   = getSheet(CONFIG.TABS.DOCUMENTS);
+    const data    = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const docIdCol = headers.indexOf('doc_id');
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][docIdCol] === docId) {
+        sheet.deleteRow(i + 1);
+        break;
+      }
+    }
+
+    writeAuditLog(session.email, session.name, 'DELETED', docId, doc.file_name);
+    return successResponse({ message: 'Document deleted successfully.' });
 
   } catch (e) {
     return errorResponse(e.message);
   }
 }
 
-function _notifyTeamLead(uploaderName, subject, component, subComponent) {
+// ── Edit document (subject / description / sub_component) ──────
+function updateDocument(token, docId, updates) {
+  try {
+    const session = requireAuth(token);
+
+    const rows = getSheetData(CONFIG.TABS.DOCUMENTS);
+    const doc  = rows.find(r => r.doc_id === docId);
+    if (!doc) return errorResponse('Document not found.');
+
+    // Only owner or super_admin can edit
+    if (doc.uploader_email !== session.email && session.role !== CONFIG.ROLES.SUPER_ADMIN) {
+      return errorResponse('You can only edit your own documents.');
+    }
+
+    // Managers cannot edit after TL has acted
+    if (session.role === CONFIG.ROLES.MANAGER && CONFIG.LOCKED_STATUSES.includes(doc.status)) {
+      return errorResponse(
+        'This document is locked. Once a Team Lead has acted on it, it becomes a permanent record.'
+      );
+    }
+
+    const rowNum = findRowIndex(CONFIG.TABS.DOCUMENTS, 'doc_id', docId);
+    if (rowNum === -1) return errorResponse('Document not found.');
+
+    if (updates.subject     !== undefined && updates.subject.trim()) {
+      updateCell(CONFIG.TABS.DOCUMENTS, rowNum, 'subject',       updates.subject.trim());
+    }
+    if (updates.description !== undefined) {
+      updateCell(CONFIG.TABS.DOCUMENTS, rowNum, 'description',   updates.description.trim());
+    }
+    if (updates.subComponent) {
+      updateCell(CONFIG.TABS.DOCUMENTS, rowNum, 'sub_component', updates.subComponent);
+    }
+
+    writeAuditLog(session.email, session.name, 'UPDATED', docId, doc.file_name);
+    return successResponse({ message: 'Document updated successfully.' });
+
+  } catch (e) {
+    return errorResponse(e.message);
+  }
+}
+
+function _notifyTeamLead(uploaderName, subject, component, subComponent, state) {
   try {
     const users = getSheetData(CONFIG.TABS.USERS);
-    const tls   = users.filter(u => u.role === CONFIG.ROLES.TEAM_LEAD && u.is_active === true);
+    const tls   = users.filter(u =>
+      (u.role === CONFIG.ROLES.TEAM_LEAD || u.role === CONFIG.ROLES.STATE_LEAD) &&
+      u.is_active === true &&
+      (!state || (u.state || '').toLowerCase() === state.toLowerCase())
+    );
     tls.forEach(tl => {
       GmailApp.sendEmail(
         tl.email,
@@ -202,11 +338,10 @@ function _notifyTeamLead(uploaderName, subject, component, subComponent) {
         'Dear ' + tl.name + ',\n\n' +
         uploaderName + ' has uploaded a new document for your review.\n\n' +
         'Subject   : ' + subject + '\n' +
-        'Component : ' + component + ' > ' + subComponent + '\n\n' +
-        'Please log in to verify the document.\n\n' +
-        'Regards,\n' +
-        'Technical Assistant Unit\n' +
-        'Educate Girls'
+        'Component : ' + component + ' > ' + subComponent + '\n' +
+        (state ? 'State     : ' + state + '\n' : '') +
+        '\nPlease log in to verify the document.\n\n' +
+        'Regards,\nTechnical Assistant Unit\nEducate Girls'
       );
     });
   } catch (e) {

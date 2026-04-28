@@ -345,6 +345,43 @@
                    accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png"
                    onchange="handleFileSelect(this)">
           </div>
+          <!-- Share / Target Audience — shown for privileged roles only -->
+          <div id="shareWithGroup" style="display:none">
+            <div id="targetAudienceRow" class="form-group" style="display:none">
+              <label>📢 Share With <span style="color:#c62828">*</span></label>
+              <select id="targetAudienceSelect">
+                <option value="ALL">Everyone (All States)</option>
+                <option value="GROUP_6A">Group 6A — UP, MP, Bihar, Jharkhand, Rajasthan, CG</option>
+                <option value="GROUP_6B">Group 6B — Maharashtra, Telangana, WB, Odisha, AP, Assam</option>
+                <option value="UP">State: Uttar Pradesh</option>
+                <option value="MP">State: Madhya Pradesh</option>
+                <option value="Bihar">State: Bihar</option>
+                <option value="Jharkhand">State: Jharkhand</option>
+                <option value="Rajasthan">State: Rajasthan</option>
+                <option value="Chhattisgarh">State: Chhattisgarh</option>
+                <option value="Maharashtra">State: Maharashtra</option>
+                <option value="Telangana">State: Telangana</option>
+                <option value="West Bengal">State: West Bengal</option>
+                <option value="Odisha">State: Odisha</option>
+                <option value="Andhra Pradesh">State: Andhra Pradesh</option>
+                <option value="Assam">State: Assam</option>
+              </select>
+            </div>
+            <div id="targetAudienceNote" class="form-group" style="display:none">
+              <div style="background:#e8f5e9;border-left:4px solid #2e7d32;padding:8px 12px;border-radius:4px;font-size:0.9rem;color:#2e7d32">
+                📢 <span id="targetAudienceNoteText"></span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Share With Component <span style="color:#9e9e9e;font-weight:400">(optional)</span></label>
+              <select id="targetComponentSelect">
+                <option value="">— None (state-based visibility only) —</option>
+              </select>
+            </div>
+          </div>
+          <div style="background:#fff3e0;border-left:4px solid #e65100;padding:8px 12px;border-radius:4px;font-size:0.85rem;color:#bf360c;margin-bottom:12px">
+            ℹ️ You can upload multiple files for the same subject — each file gets its own entry.
+          </div>
           <button class="btn btn-primary" style="width:auto;margin-top:0" id="uploadBtn" onclick="submitUpload()">
             📤&nbsp; Upload Document
           </button>
@@ -421,7 +458,7 @@
               <thead>
                 <tr>
                   <th>#</th><th>Uploader</th><th>Subject</th><th>Component</th>
-                  <th>Sub-Component</th><th>Month / Year</th><th>Status</th><th>Action</th>
+                  <th>Sub-Component</th><th>State</th><th>Month / Year</th><th>Status</th><th>Action</th>
                 </tr>
               </thead>
               <tbody id="allDocsTableBody">
@@ -456,10 +493,29 @@
   </div><!-- /layout -->
 </div><!-- /dashboardPage -->
 
+<!-- ══════════ EDIT MODAL ══════════ -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-title">✏️ Edit Document</div>
+    <div class="form-group">
+      <label>Subject <span style="color:#c62828">*</span></label>
+      <input type="text" id="editSubject" placeholder="Document subject">
+    </div>
+    <div class="form-group">
+      <label>Description <span style="color:#9e9e9e;font-weight:400">(optional)</span></label>
+      <textarea id="editDescription" placeholder="Brief description" style="min-height:70px"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-outline" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════ REJECT MODAL ══════════ -->
 <div class="modal-overlay" id="rejectModal">
   <div class="modal">
-    <div class="modal-title">❌ Reject Document</div>
+    <div class="modal-title" id="rejectModalTitle">❌ Reject Document</div>
     <div class="form-group">
       <label>Rejection Reason <span style="color:#c62828">*</span></label>
       <textarea id="rejectRemark" placeholder="Enter reason for rejection..." style="min-height:90px"></textarea>
@@ -496,14 +552,32 @@ function api(action) {
 // ════════════════════════════════════════════════
 //  SESSION
 // ════════════════════════════════════════════════
-var SESSION = { token: null, role: null, name: null };
+var SESSION = { token: null, role: null, name: null, email: null, state: null, state_group: null };
+
+var STATE_GROUPS = {
+  '6A': ['UP','MP','Bihar','Jharkhand','Rajasthan','Chhattisgarh'],
+  '6B': ['Maharashtra','Telangana','West Bengal','Odisha','Andhra Pradesh','Assam']
+};
+
+function getMyGroup(state) {
+  for (var g in STATE_GROUPS) {
+    var arr = STATE_GROUPS[g];
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i].toLowerCase() === (state || '').toLowerCase()) return g;
+    }
+  }
+  return '';
+}
 
 function initApp() {
-  var token = sessionStorage.getItem('dms_token');
-  var role  = sessionStorage.getItem('dms_role');
-  var name  = sessionStorage.getItem('dms_name');
+  var token       = sessionStorage.getItem('dms_token');
+  var role        = sessionStorage.getItem('dms_role');
+  var name        = sessionStorage.getItem('dms_name');
+  var email       = sessionStorage.getItem('dms_email') || '';
+  var state       = sessionStorage.getItem('dms_state') || '';
+  var state_group = sessionStorage.getItem('dms_state_group') || '';
   if (token && role && name) {
-    SESSION = { token: token, role: role, name: name };
+    SESSION = { token: token, role: role, name: name, email: email, state: state, state_group: state_group };
     showDashboard();
   } else {
     showLoginPage();
@@ -515,13 +589,31 @@ function showLoginPage() {
   document.getElementById('dashboardPage').style.display = 'none';
 }
 
+var ROLE_LABELS = {
+  manager:         'Manager',
+  team_lead:       'Team Lead',
+  state_lead:      'State Lead',
+  project_manager: 'Project Manager',
+  ceo:             'CEO',
+  super_admin:     'Super Admin'
+};
+
+function getRoleBadge() {
+  var label = ROLE_LABELS[SESSION.role] || SESSION.role;
+  if (SESSION.role === 'team_lead' || SESSION.role === 'state_lead') {
+    return label + (SESSION.state ? ' — ' + SESSION.state : '');
+  }
+  if (SESSION.role === 'project_manager') {
+    return label + (SESSION.state_group ? ' — Group ' + SESSION.state_group : '');
+  }
+  return label;
+}
+
 function showDashboard() {
   document.getElementById('loginPage').style.display    = 'none';
   document.getElementById('dashboardPage').style.display = 'block';
   document.getElementById('userNameDisplay').textContent = SESSION.name;
-  document.getElementById('roleDisplay').textContent =
-    SESSION.role === 'super_admin' ? 'Super Admin' :
-    SESSION.role === 'team_lead'   ? 'Team Lead'   : 'Manager';
+  document.getElementById('roleDisplay').textContent = getRoleBadge();
   buildSidebar();
   loadComponents();
   populateYearFilters();
@@ -579,10 +671,15 @@ function verifyOTP() {
     .then(function(res) {
       setLoginLoading('verifyOtpBtn', false, 'Login');
       if (!res.success) { showLoginMsg(res.message, 'error'); return; }
-      sessionStorage.setItem('dms_token', res.data.token);
-      sessionStorage.setItem('dms_role',  res.data.role);
-      sessionStorage.setItem('dms_name',  res.data.name);
-      SESSION = { token: res.data.token, role: res.data.role, name: res.data.name };
+      sessionStorage.setItem('dms_token',       res.data.token);
+      sessionStorage.setItem('dms_role',        res.data.role);
+      sessionStorage.setItem('dms_name',        res.data.name);
+      sessionStorage.setItem('dms_email',       res.data.email       || currentEmail);
+      sessionStorage.setItem('dms_state',       res.data.state       || '');
+      sessionStorage.setItem('dms_state_group', res.data.state_group || '');
+      SESSION = { token: res.data.token, role: res.data.role, name: res.data.name,
+                  email: res.data.email || currentEmail,
+                  state: res.data.state || '', state_group: res.data.state_group || '' };
       showDashboard();
     })
     .catch(function() {
@@ -607,11 +704,20 @@ document.addEventListener('keydown', function(e) {
 //  SIDEBAR
 // ════════════════════════════════════════════════
 function buildSidebar() {
+  var r = SESSION.role;
+  var isPrivileged = (r === 'team_lead' || r === 'state_lead' ||
+                      r === 'project_manager' || r === 'ceo' || r === 'super_admin');
   var items = [
     { id: 'upload',   icon: '\u{1F4E4}', label: 'Upload Document' },
     { id: 'mydocs',   icon: '\u{1F4C1}', label: 'My Documents' }
   ];
-  if (SESSION.role === 'team_lead' || SESSION.role === 'super_admin') {
+  if (r === 'team_lead' || r === 'state_lead') {
+    var stateLabel = SESSION.state ? ' (' + SESSION.state + ')' : '';
+    items.push({ id: 'alldocs', icon: '\u{1F4CB}', label: 'State Documents' + stateLabel });
+  } else if (r === 'project_manager') {
+    var groupLabel = SESSION.state_group ? ' (Group ' + SESSION.state_group + ')' : '';
+    items.push({ id: 'alldocs', icon: '\u{1F4CB}', label: 'Group Documents' + groupLabel });
+  } else if (r === 'ceo' || r === 'super_admin') {
     items.push({ id: 'alldocs', icon: '\u{1F4CB}', label: 'All Documents' });
   }
   items.push({ id: 'circulars', icon: '\u{1F4E2}', label: 'Circulars' });
@@ -642,8 +748,36 @@ var selectedFile = null;
 function loadComponents() {
   var shareGroup = document.getElementById('shareWithGroup');
   if (shareGroup) {
-    shareGroup.style.display =
-      (SESSION.role === 'team_lead' || SESSION.role === 'super_admin') ? 'block' : 'none';
+    var r = SESSION.role;
+    var isPrivileged = (r === 'team_lead' || r === 'state_lead' ||
+                        r === 'project_manager' || r === 'ceo' || r === 'super_admin');
+    shareGroup.style.display = isPrivileged ? 'block' : 'none';
+
+    // CEO / super_admin: show audience dropdown
+    var audienceRow  = document.getElementById('targetAudienceRow');
+    var audienceNote = document.getElementById('targetAudienceNote');
+    var noteText     = document.getElementById('targetAudienceNoteText');
+    if (audienceRow)  audienceRow.style.display  = 'none';
+    if (audienceNote) audienceNote.style.display = 'none';
+
+    if (r === 'ceo' || r === 'super_admin') {
+      if (audienceRow) audienceRow.style.display = 'block';
+    } else if (r === 'project_manager') {
+      if (audienceNote && noteText) {
+        noteText.textContent = 'Document will be visible to all states in your Group ' + (SESSION.state_group || '') + '.';
+        audienceNote.style.display = 'block';
+      }
+    } else if (r === 'state_lead') {
+      if (audienceNote && noteText) {
+        noteText.textContent = 'Document will be visible to your entire state team (' + (SESSION.state || '') + ').';
+        audienceNote.style.display = 'block';
+      }
+    } else if (r === 'team_lead') {
+      if (audienceNote && noteText) {
+        noteText.textContent = 'Document will be visible to all managers in ' + (SESSION.state || 'your state') + '.';
+        audienceNote.style.display = 'block';
+      }
+    }
   }
   api('getComponents', SESSION.token)
     .then(function(res) {
@@ -725,11 +859,14 @@ function submitUpload() {
     var base64 = ev.target.result.split(',')[1];
     var targetComponent = document.getElementById('targetComponentSelect')
       ? document.getElementById('targetComponentSelect').value : '';
+    var targetAudience = document.getElementById('targetAudienceSelect')
+      ? document.getElementById('targetAudienceSelect').value : '';
     api('uploadDocument', SESSION.token, {
       component: component, subComponent: subComponent,
       subject: subject, description: description,
       fileBase64: base64, fileName: selectedFile.name, mimeType: selectedFile.type,
-      targetComponent: targetComponent
+      targetComponent: targetComponent,
+      targetAudience: targetAudience
     })
     .then(function(res) {
       btn.disabled = false; btn.innerHTML = 'Upload Document';
@@ -772,7 +909,7 @@ function loadDocs() {
 }
 
 function loadAllDocs() {
-  document.getElementById('allDocsTableBody').innerHTML = '<tr><td colspan=\"8\" class=\"no-data\">Loading...</td></tr>';
+  document.getElementById('allDocsTableBody').innerHTML = '<tr><td colspan=\"9\" class=\"no-data\">Loading...</td></tr>';
   api('getDocuments', SESSION.token, getFilters('allFilter'))
     .then(function(res) { if (!res.success) return; renderDocsTable('allDocsTableBody', res.data, true); });
 }
@@ -792,21 +929,67 @@ function renderDocsTable(tbodyId, rows, showUploader) {
   if (!rows.length) {
     tbody.innerHTML = '<tr><td colspan=\"8\" class=\"no-data\">No documents found.</td></tr>'; return;
   }
+  var role = SESSION.role;
+  var isPrivilegedRole = (role !== 'manager');
+  var canVerifyRole    = (role === 'team_lead' || role === 'state_lead' || role === 'super_admin');
+  var canApproveRole   = (role === 'state_lead' || role === 'project_manager' || role === 'ceo' || role === 'super_admin');
+  var showState        = (role === 'project_manager' || role === 'ceo' || role === 'super_admin');
+
   tbody.innerHTML = rows.map(function(r, i) {
-    var canVerify = (SESSION.role === 'team_lead' || SESSION.role === 'super_admin') && r.status === 'pending';
-    var verifyBtns = canVerify
-      ? '<button class=\"btn btn-success btn-sm\" onclick=\"verifyDoc(\'' + r.doc_id + '\')\">Verify</button> ' +
-        '<button class=\"btn btn-danger btn-sm\" onclick=\"openRejectModal(\'' + r.doc_id + '\')\">Reject</button>'
-      : '';
+    var btns = '';
+    var isOwn = (r.uploader_email === SESSION.email);
+
+    // Download button
+    btns += '<a href=\"' + toDownloadUrl(r.drive_link) + '\" target=\"_blank\" class=\"btn btn-outline btn-sm\">↓</a> ';
+
+    // Verify / TL-Reject (pending docs, by TL/SL/admin)
+    if (canVerifyRole && r.status === 'pending') {
+      btns += '<button class=\"btn btn-success btn-sm\" onclick=\"verifyDoc(\'' + r.doc_id + '\')\">✔ Verify</button> ';
+      btns += '<button class=\"btn btn-danger btn-sm\" onclick=\"openRejectModal(\'' + r.doc_id + '\',\'tl\')\">✖ Reject</button> ';
+    }
+
+    // Approve / Admin-Reject (tl_verified docs, by SL/PM/CEO/admin)
+    if (canApproveRole && r.status === 'tl_verified') {
+      btns += '<button class=\"btn btn-success btn-sm\" onclick=\"approveDoc(\'' + r.doc_id + '\')\">✔ Approve</button> ';
+      btns += '<button class=\"btn btn-danger btn-sm\" onclick=\"openRejectModal(\'' + r.doc_id + '\',\'admin\')\">✖ Reject</button> ';
+    }
+
+    // Edit button:
+    //   Manager: only if status is pending AND own doc
+    //   Privileged roles: own docs anytime (their uploads bypass workflow)
+    //   Super_admin: any pending doc
+    var canEdit = false;
+    if (role === 'super_admin') canEdit = (r.status === 'pending');
+    else if (isOwn && role === 'manager') canEdit = (r.status === 'pending');
+    else if (isOwn && isPrivilegedRole)   canEdit = true;
+
+    if (canEdit) {
+      btns += '<button class=\"btn btn-outline btn-sm\" onclick=\"openEditModal(\'' + r.doc_id + '\',\'' + (r.subject||'').replace(/'/g,'') + '\',\'' + (r.description||'').replace(/'/g,'') + '\')\">✏</button> ';
+    }
+
+    // Delete button:
+    //   Manager: only pending own doc
+    //   Privileged: own doc anytime
+    //   Super_admin: any doc (handled server-side too)
+    var canDelete = false;
+    if (role === 'super_admin') canDelete = true;
+    else if (isOwn && role === 'manager') canDelete = (r.status === 'pending');
+    else if (isOwn && isPrivilegedRole)   canDelete = true;
+
+    if (canDelete) {
+      btns += '<button class=\"btn btn-danger btn-sm\" onclick=\"deleteDoc(\'' + r.doc_id + '\')\">🗑</button>';
+    }
+
     return '<tr>' +
       '<td>' + (i + 1) + '</td>' +
-      (showUploader ? '<td>' + r.uploader_name + '</td>' : '') +
-      '<td>' + r.subject + '</td>' +
-      '<td>' + r.component + '</td>' +
-      '<td>' + r.sub_component + '</td>' +
-      (showUploader ? '<td>' + r.month + ' ' + r.year + '</td>' : '<td>' + r.month + '</td><td>' + r.year + '</td>') +
+      (showUploader ? '<td>' + (r.uploader_name || '') + '</td>' : '') +
+      '<td>' + (r.subject || '') + '</td>' +
+      '<td>' + (r.component || '') + '</td>' +
+      '<td>' + (r.sub_component || '') + '</td>' +
+      (showState ? '<td>' + audienceLabel(r.state) + '</td>' : '') +
+      (showUploader ? '<td>' + (r.month||'') + ' ' + (r.year||'') + '</td>' : '<td>' + (r.month||'') + '</td><td>' + (r.year||'') + '</td>') +
       '<td>' + statusBadge(r.status) + '</td>' +
-      '<td><a href=\"' + toDownloadUrl(r.drive_link) + '\" target=\"_blank\" class=\"btn btn-outline btn-sm\">Download</a> ' + verifyBtns + '</td>' +
+      '<td style=\"white-space:nowrap\">' + btns + '</td>' +
       '</tr>';
   }).join('');
 }
@@ -827,6 +1010,14 @@ function statusBadge(s) {
   return '<span class=\"badge ' + parts[0] + '\">' + parts[1] + '</span>';
 }
 
+function audienceLabel(state) {
+  if (!state) return '—';
+  if (state === 'ALL') return '🌐 All';
+  if (state === 'GROUP_6A') return '📦 Group 6A';
+  if (state === 'GROUP_6B') return '📦 Group 6B';
+  return state;
+}
+
 function clearFilters() {
   ['filterYear','filterMonth','filterComponent','filterStatus'].forEach(function(id){ document.getElementById(id).value=''; });
   document.getElementById('filterSearch').value=''; loadDocs();
@@ -837,18 +1028,28 @@ function clearAllFilters() {
 }
 
 // ════════════════════════════════════════════════
-//  VERIFY / REJECT
+//  VERIFY / APPROVE / REJECT / DELETE
 // ════════════════════════════════════════════════
-var rejectDocId = null;
+var rejectDocId   = null;
+var rejectType    = 'tl';   // 'tl' or 'admin'
 
 function verifyDoc(docId) {
-  if (!confirm('Verify this document?')) return;
+  if (!confirm('Mark this document as verified?')) return;
   api('verifyDocument', SESSION.token, docId)
     .then(function(res) { alert(res.success ? 'Document verified!' : res.message); loadAllDocs(); });
 }
 
-function openRejectModal(docId) {
+function approveDoc(docId) {
+  if (!confirm('Approve this document?')) return;
+  api('approveDocument', SESSION.token, docId)
+    .then(function(res) { alert(res.success ? 'Document approved!' : res.message); loadAllDocs(); });
+}
+
+function openRejectModal(docId, type) {
   rejectDocId = docId;
+  rejectType  = type || 'tl';
+  var title = document.getElementById('rejectModalTitle');
+  if (title) title.textContent = (rejectType === 'admin') ? 'Reject After Verification' : 'Reject Document';
   document.getElementById('rejectRemark').value = '';
   document.getElementById('rejectModal').classList.add('open');
 }
@@ -856,8 +1057,39 @@ function closeRejectModal() { document.getElementById('rejectModal').classList.r
 function confirmReject() {
   var remark = document.getElementById('rejectRemark').value.trim();
   if (!remark) { alert('Please enter a rejection reason.'); return; }
-  api('rejectDocument', SESSION.token, rejectDocId, remark)
+  var action = (rejectType === 'admin') ? 'rejectApproval' : 'rejectDocument';
+  api(action, SESSION.token, rejectDocId, remark)
     .then(function(res) { closeRejectModal(); alert(res.success ? 'Document rejected.' : res.message); loadAllDocs(); });
+}
+
+function deleteDoc(docId) {
+  if (!confirm('Delete this document? This cannot be undone.')) return;
+  api('deleteDocument', SESSION.token, docId)
+    .then(function(res) { alert(res.success ? 'Document deleted.' : res.message); loadDocs(); loadAllDocs(); });
+}
+
+// ════════════════════════════════════════════════
+//  EDIT DOCUMENT
+// ════════════════════════════════════════════════
+var editDocId = null;
+
+function openEditModal(docId, subject, description) {
+  editDocId = docId;
+  document.getElementById('editSubject').value     = subject || '';
+  document.getElementById('editDescription').value = description || '';
+  document.getElementById('editModal').classList.add('open');
+}
+function closeEditModal() { document.getElementById('editModal').classList.remove('open'); editDocId = null; }
+function confirmEdit() {
+  var subject = document.getElementById('editSubject').value.trim();
+  if (!subject) { alert('Subject is required.'); return; }
+  var description = document.getElementById('editDescription').value.trim();
+  api('updateDocument', SESSION.token, editDocId, { subject: subject, description: description })
+    .then(function(res) {
+      closeEditModal();
+      alert(res.success ? 'Document updated.' : res.message);
+      loadDocs(); loadAllDocs();
+    });
 }
 
 // ════════════════════════════════════════════════
@@ -915,7 +1147,7 @@ function logout() {
   if (!confirm('Are you sure you want to logout?')) return;
   api('logoutUser', SESSION.token).then(function() {
     sessionStorage.clear();
-    SESSION = { token: null, role: null, name: null };
+    SESSION = { token: null, role: null, name: null, email: null, state: null, state_group: null };
     document.getElementById('emailInput').value = '';
     document.getElementById('otpInput').value = '';
     document.getElementById('otpSection').style.display = 'none';

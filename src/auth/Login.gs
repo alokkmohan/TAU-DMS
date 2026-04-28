@@ -76,15 +76,20 @@ function verifyOTP(email, enteredOTP) {
     // Mark OTP as used
     sheet.getRange(matchRow, usedCol + 1).setValue(true);
 
-    const user = getUserByEmail(email);
-    const token = _createSession(email, user.role, user.name);
+    const user        = getUserByEmail(email);
+    const userState   = user.state       || '';
+    const stateGroup  = user.state_group || getStateGroup(userState);
+    const token       = _createSession(email, user.role, user.name, userState, stateGroup);
 
     writeAuditLog(email, user.name, 'LOGIN_SUCCESS', '', '');
 
     return successResponse({
-      token: token,
-      role:  user.role,
-      name:  user.name
+      token:       token,
+      email:       email,
+      role:        user.role,
+      name:        user.name,
+      state:       userState,
+      state_group: stateGroup
     });
 
   } catch (e) {
