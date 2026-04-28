@@ -27,6 +27,7 @@ function _route(action, p) {
     case 'getComponents':     return getComponents(p[0]);
     case 'getSubComponents':  return getSubComponents(p[0], p[1]);
     case 'getAllComponents':   return getAllComponents(p[0]);
+    case 'addSubComponent':   return addSubComponent(p[0], p[1], p[2], p[3]);
     case 'uploadDocument':    return uploadDocument(p[0], p[1]);
     case 'getDocuments':      return getDocuments(p[0], p[1]);
     case 'deleteDocument':    return deleteDocument(p[0], p[1]);
@@ -38,7 +39,8 @@ function _route(action, p) {
     case 'approveDocument':   return approveDocument(p[0], p[1]);
     case 'rejectApproval':    return rejectApproval(p[0], p[1], p[2]);
 
-    // ── Circulars ─────────────────────────────
+    // ── Circulars / Govt Letters ──────────────
+    case 'uploadCircular':        return uploadCircular(p[0], p[1]);
     case 'getCirculars':          return getCirculars(p[0]);
     case 'acknowledgeCircular':   return acknowledgeCircular(p[0], p[1]);
 

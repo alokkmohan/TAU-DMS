@@ -1,3 +1,33 @@
+// ── Add a new sub-component + description to Dropdowns sheet ──
+function addSubComponent(token, component, subComponent, description) {
+  try {
+    const session = requireAuth(token);
+    if (!component || !subComponent) {
+      return errorResponse('Component and sub-component name are required.');
+    }
+
+    const rows   = getSheetData(CONFIG.TABS.DROPDOWNS);
+    const exists = rows.find(r =>
+      (r.component     || '').toLowerCase() === component.toLowerCase() &&
+      (r.sub_component || '').toLowerCase() === subComponent.toLowerCase()
+    );
+    if (exists) return errorResponse('This sub-component already exists for ' + component + '.');
+
+    appendRow(CONFIG.TABS.DROPDOWNS, {
+      component:     component,
+      sub_component: subComponent,
+      description:   description || '',
+      template_link: ''
+    });
+
+    writeAuditLog(session.email, session.name, 'ADD_SUB_COMPONENT', '', subComponent);
+    return successResponse({ message: 'Sub-component "' + subComponent + '" added to ' + component + '.' });
+
+  } catch (e) {
+    return errorResponse(e.message);
+  }
+}
+
 // ── Component dropdowns (filtered by user's component_access) ──
 function getComponents(token) {
   try {

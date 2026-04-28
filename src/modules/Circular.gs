@@ -1,20 +1,24 @@
 function uploadCircular(token, payload) {
   try {
     const session = requireAuth(token);
-    requireRole(session, [CONFIG.ROLES.TEAM_LEAD, CONFIG.ROLES.SUPER_ADMIN]);
+    requireRole(session, [
+      CONFIG.ROLES.TEAM_LEAD,    CONFIG.ROLES.STATE_LEAD,
+      CONFIG.ROLES.PROJECT_MANAGER, CONFIG.ROLES.CEO,
+      CONFIG.ROLES.SUPER_ADMIN
+    ]);
 
     const { title, refNumber, remarks, fileBase64, fileName, mimeType } = payload;
-    if (!title || !fileBase64 || !fileName) return errorResponse('Title aur file zaroori hai.');
+    if (!title || !fileBase64 || !fileName) return errorResponse('Title and file are required.');
 
     const ext = fileName.split('.').pop().toLowerCase();
     if (!['pdf','doc','docx','jpg','jpeg','png'].includes(ext)) {
-      return errorResponse('Sirf PDF, Word ya image allowed hai.');
+      return errorResponse('Only PDF, Word, or image files are allowed.');
     }
 
-    const circularId  = generateCircularId();
+    const circularId   = generateCircularId();
     const autoFileName = 'Circular_' + title.replace(/\s+/g,'_').substring(0,30) + '_' + circularId + '.' + ext;
-    const folderId    = getCircularsFolder();
-    const driveResult = saveFileToDrive(fileBase64, mimeType, autoFileName, folderId);
+    const folderId     = getCircularsFolder();
+    const driveResult  = saveFileToDrive(fileBase64, mimeType, autoFileName, folderId);
 
     // Count active managers
     const users    = getSheetData(CONFIG.TABS.USERS);
@@ -35,10 +39,10 @@ function uploadCircular(token, payload) {
 
     writeAuditLog(session.email, session.name, 'CIRCULAR_UPLOADED', circularId, autoFileName);
 
-    // Notify all managers
-    _notifyManagersCircular(managers, title, circularId, session.name);
+    // Notify all active managers
+    _notifyManagersCircular(managers, title, session.name);
 
-    return successResponse({ message: 'Circular upload ho gaya! Sabhi managers ko notify kar diya.' });
+    return successResponse({ message: 'Circular uploaded successfully. All managers have been notified.' });
 
   } catch (e) {
     console.error('uploadCircular error:', e);
@@ -77,7 +81,12 @@ function getCirculars(token) {
 function acknowledgeCircular(token, circularId) {
   try {
     const session = requireAuth(token);
-    requireRole(session, [CONFIG.ROLES.MANAGER]);
+    // All roles can acknowledge except the uploader themselves
+    requireRole(session, [
+      CONFIG.ROLES.MANAGER,      CONFIG.ROLES.TEAM_LEAD,
+      CONFIG.ROLES.STATE_LEAD,   CONFIG.ROLES.PROJECT_MANAGER,
+      CONFIG.ROLES.CEO,          CONFIG.ROLES.SUPER_ADMIN
+    ]);
 
     // Check not already acknowledged
     const acks = getSheetData(CONFIG.TABS.CIRCULAR_ACK);
@@ -99,17 +108,17 @@ function acknowledgeCircular(token, circularId) {
   }
 }
 
-function _notifyManagersCircular(managers, title, circularId, uploaderName) {
+function _notifyManagersCircular(managers, title, uploaderName) {
   try {
     managers.forEach(m => {
       GmailApp.sendEmail(
         m.email,
-        CONFIG.SYSTEM_NAME + ' — Naya Circular: ' + title,
-        'Namaste ' + m.name + ',\n\n' +
-        uploaderName + ' ne ek naya circular share kiya hai.\n\n' +
-        'Circular: ' + title + '\n\n' +
-        'Kripya DMS portal par login karein aur "Maine padh liya" acknowledge karein.\n\n' +
-        '— ' + CONFIG.SYSTEM_NAME
+        'Document Management System: New Circular — ' + title,
+        'Dear ' + m.name + ',\n\n' +
+        uploaderName + ' has shared a new circular / government order with you.\n\n' +
+        'Title: ' + title + '\n\n' +
+        'Please log in to the Document Management System and acknowledge receipt under the "Govt Letters" section.\n\n' +
+        'Regards,\nTechnical Assistant Unit\nEducate Girls'
       );
     });
   } catch (e) {

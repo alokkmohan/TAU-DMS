@@ -321,6 +321,24 @@
               </select>
             </div>
           </div>
+          <!-- Custom sub-component (if not in list) -->
+          <div id="customSubGroup" style="display:none;margin-top:-8px;margin-bottom:8px;padding:10px 12px;background:#f3f4f6;border-radius:6px;border:1px dashed #9e9e9e">
+            <div style="font-size:0.85rem;color:#555;margin-bottom:6px">➕ Add new sub-component to list (one-time)</div>
+            <div class="form-row" style="gap:8px">
+              <div class="form-group" style="margin-bottom:0">
+                <input type="text" id="customSubName" placeholder="Sub-component name *">
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <input type="text" id="customSubDesc" placeholder="Short description (optional)">
+              </div>
+              <button class="btn btn-outline btn-sm" style="align-self:center;white-space:nowrap" onclick="saveCustomSubComponent()">Save &amp; Use</button>
+            </div>
+          </div>
+          <div style="margin-bottom:8px">
+            <a href="#" style="font-size:0.82rem;color:#1565c0;text-decoration:none" onclick="toggleCustomSub(event)">
+              ➕ Sub-component not in list? Add new
+            </a>
+          </div>
           <div class="form-group">
             <label>Subject <span style="color:#c62828">*</span></label>
             <input type="text" id="subjectInput" placeholder="Enter document subject">
@@ -469,20 +487,60 @@
         </div>
       </div>
 
-      <!-- ── CIRCULARS ── -->
+      <!-- ── CIRCULARS / GOVT LETTERS ── -->
       <div class="section" id="sec-circulars">
+
+        <!-- Upload form — visible only to TL / SL / PM / CEO / Admin -->
+        <div class="card" id="circularUploadCard" style="display:none">
+          <div class="card-title">📤 Upload Circular / Order</div>
+          <div id="circularAlert" class="alert" style="display:none"></div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Title <span style="color:#c62828">*</span></label>
+              <input type="text" id="circularTitle" placeholder="e.g. Exam Schedule 2025">
+            </div>
+            <div class="form-group">
+              <label>Reference Number <span style="color:#9e9e9e;font-weight:400">(optional)</span></label>
+              <input type="text" id="circularRefNo" placeholder="e.g. EDU/2025/123">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Remarks <span style="color:#9e9e9e;font-weight:400">(optional)</span></label>
+            <textarea id="circularRemarks" placeholder="Any note for managers..." style="min-height:60px"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Attach File <span style="color:#c62828">*</span> <small style="color:#9e9e9e">(PDF / Word / Image, max 10 MB)</small></label>
+            <div class="file-drop" id="circularFileDrop"
+                 onclick="document.getElementById('circularFileInput').click()"
+                 ondragover="event.preventDefault();this.classList.add('drag-over')"
+                 ondragleave="this.classList.remove('drag-over')"
+                 ondrop="handleCircularDrop(event)">
+              <div class="file-drop-icon">📎</div>
+              <p>Click to browse or drag &amp; drop</p>
+              <div class="file-name" id="circularFileNameDisplay"></div>
+            </div>
+            <input type="file" id="circularFileInput" style="display:none"
+                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                   onchange="handleCircularFileSelect(this)">
+          </div>
+          <button class="btn btn-primary" style="width:auto" id="circularUploadBtn" onclick="submitCircular()">
+            📤&nbsp; Upload Circular
+          </button>
+        </div>
+
+        <!-- List -->
         <div class="card">
-          <div class="card-title">📢 Circulars &amp; Orders</div>
+          <div class="card-title" id="circularSectionTitle">📢 Circulars &amp; Orders</div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
                   <th>#</th><th>Title</th><th>Ref No.</th>
-                  <th>Date</th><th>Status</th><th>Action</th>
+                  <th>Uploaded By</th><th>Date</th><th>Status</th><th>Action</th>
                 </tr>
               </thead>
               <tbody id="circularsTableBody">
-                <tr><td colspan="6" class="no-data">Loading…</td></tr>
+                <tr><td colspan="7" class="no-data">Loading…</td></tr>
               </tbody>
             </table>
           </div>
@@ -720,7 +778,8 @@ function buildSidebar() {
   } else if (r === 'ceo' || r === 'super_admin') {
     items.push({ id: 'alldocs', icon: '\u{1F4CB}', label: 'All Documents' });
   }
-  items.push({ id: 'circulars', icon: '\u{1F4E2}', label: 'Circulars' });
+  var circLabel = (r === 'manager') ? 'Govt Letters' : 'Circulars & Orders';
+  items.push({ id: 'circulars', icon: '\u{1F4DC}', label: circLabel });
 
   document.getElementById('sidebar').innerHTML = items.map(function(item) {
     return '<div class=\"nav-item\" id=\"nav-' + item.id + '\" onclick=\"showSection(' + "'" + item.id + "'" + ')\">' +
@@ -1093,31 +1152,54 @@ function confirmEdit() {
 }
 
 // ════════════════════════════════════════════════
-//  CIRCULARS
+//  CIRCULARS / GOVT LETTERS
 // ════════════════════════════════════════════════
 function loadCirculars() {
-  document.getElementById('circularsTableBody').innerHTML = '<tr><td colspan=\"6\" class=\"no-data\">Loading...</td></tr>';
+  var isManager    = SESSION.role === 'manager';
+  var isPrivileged = !isManager;
+
+  // Show/hide upload form
+  var uploadCard = document.getElementById('circularUploadCard');
+  if (uploadCard) uploadCard.style.display = isPrivileged ? 'block' : 'none';
+
+  // Section title
+  var title = document.getElementById('circularSectionTitle');
+  if (title) title.innerHTML = isManager ? '📜 Govt Letters' : '📢 Circulars &amp; Orders';
+
+  document.getElementById('circularsTableBody').innerHTML = '<tr><td colspan=\"7\" class=\"no-data\">Loading...</td></tr>';
   api('getCirculars', SESSION.token)
-    .then(function(res) { if (!res.success) return; renderCirculars(res.data); });
+    .then(function(res) { if (!res.success) return; renderCirculars(res.data, isManager); });
 }
 
-function renderCirculars(rows) {
+function renderCirculars(rows, isManager) {
   var tbody = document.getElementById('circularsTableBody');
-  if (!rows.length) { tbody.innerHTML = '<tr><td colspan=\"6\" class=\"no-data\">No circulars found.</td></tr>'; return; }
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan=\"7\" class=\"no-data\">No circulars found.</td></tr>'; return;
+  }
   tbody.innerHTML = rows.map(function(r, i) {
-    var ackBtn = '';
-    if (SESSION.role === 'manager') {
-      ackBtn = r.acknowledged
-        ? '<span style=\"color:#2e7d32;font-weight:600\">Acknowledged</span>'
-        : '<button class=\"btn btn-success btn-sm\" onclick=\"acknowledgeCircular(\'' + r.circular_id + '\', this)\">Mark as Read</button>';
+    var ackCell = '';
+    if (isManager) {
+      ackCell = r.acknowledged
+        ? '<span class=\"badge badge-verified\">✔ Read</span>'
+        : '<span class=\"badge badge-pending\">Pending</span>';
     } else {
-      ackBtn = '<span style=\"font-size:0.8rem;color:#757575\">' + r.ack_count + '/' + r.total_managers + ' acknowledged</span>';
+      ackCell = '<span style=\"font-size:0.82rem;color:#555\">' + (r.ack_count||0) + '/' + (r.total_managers||0) + ' read</span>';
+    }
+    var ackBtn = '';
+    if (isManager && !r.acknowledged) {
+      ackBtn = '<button class=\"btn btn-success btn-sm\" onclick=\"acknowledgeCircular(\'' + r.circular_id + '\', this)\">✔ Mark as Read</button>';
     }
     return '<tr>' +
-      '<td>' + (i+1) + '</td><td>' + r.title + '</td><td>' + (r.ref_number||'—') + '</td>' +
-      '<td>' + r.uploaded_at + '</td>' +
-      '<td>' + (r.acknowledged ? '<span class=\"badge badge-verified\">Acknowledged</span>' : '<span class=\"badge badge-pending\">Pending</span>') + '</td>' +
-      '<td><a href=\"' + toDownloadUrl(r.drive_link) + '\" target=\"_blank\" class=\"btn btn-outline btn-sm\">Download</a> ' + ackBtn + '</td></tr>';
+      '<td>' + (i+1) + '</td>' +
+      '<td>' + (r.title||'') + '</td>' +
+      '<td>' + (r.ref_number||'—') + '</td>' +
+      '<td>' + (r.uploader_name||'') + '</td>' +
+      '<td>' + (r.uploaded_at||'') + '</td>' +
+      '<td>' + ackCell + '</td>' +
+      '<td style=\"white-space:nowrap\">' +
+        '<a href=\"' + toDownloadUrl(r.drive_link) + '\" target=\"_blank\" class=\"btn btn-outline btn-sm\">↓ Download</a> ' +
+        ackBtn +
+      '</td></tr>';
   }).join('');
 }
 
@@ -1125,8 +1207,99 @@ function acknowledgeCircular(circularId, btn) {
   btn.disabled = true; btn.textContent = '...';
   api('acknowledgeCircular', SESSION.token, circularId)
     .then(function(res) {
-      if (res.success) btn.outerHTML = '<span style=\"color:#2e7d32;font-weight:600\">Acknowledged</span>';
-      else { btn.disabled = false; btn.textContent = 'Mark as Read'; alert(res.message); }
+      if (res.success) { loadCirculars(); }
+      else { btn.disabled = false; btn.textContent = '✔ Mark as Read'; alert(res.message); }
+    });
+}
+
+// ── Circular upload (TL / SL / PM / CEO / Admin) ──────────────
+var selectedCircularFile = null;
+
+function handleCircularFileSelect(input) {
+  if (input.files[0]) setCircularFile(input.files[0]);
+}
+function handleCircularDrop(e) {
+  e.preventDefault();
+  document.getElementById('circularFileDrop').classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) setCircularFile(e.dataTransfer.files[0]);
+}
+function setCircularFile(file) {
+  if (file.size > 10 * 1024 * 1024) {
+    alert('File size exceeds 10 MB.'); return;
+  }
+  selectedCircularFile = file;
+  document.getElementById('circularFileNameDisplay').textContent =
+    file.name + ' (' + (file.size / (1024*1024)).toFixed(2) + ' MB)';
+}
+
+function submitCircular() {
+  var title    = document.getElementById('circularTitle').value.trim();
+  var refNo    = document.getElementById('circularRefNo').value.trim();
+  var remarks  = document.getElementById('circularRemarks').value.trim();
+  if (!title)                { alert('Title is required.');     return; }
+  if (!selectedCircularFile) { alert('Please attach a file.');  return; }
+
+  var btn = document.getElementById('circularUploadBtn');
+  btn.disabled = true; btn.innerHTML = '<span class=\"spinner\"></span>Uploading...';
+
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var base64 = ev.target.result.split(',')[1];
+    api('uploadCircular', SESSION.token, {
+      title: title, refNumber: refNo, remarks: remarks,
+      fileBase64: base64, fileName: selectedCircularFile.name, mimeType: selectedCircularFile.type
+    }).then(function(res) {
+      btn.disabled = false; btn.innerHTML = '📤&nbsp; Upload Circular';
+      var alertEl = document.getElementById('circularAlert');
+      alertEl.textContent = res.success ? res.data.message : res.message;
+      alertEl.className   = 'alert alert-' + (res.success ? 'success' : 'error');
+      alertEl.style.display = 'block';
+      setTimeout(function() { alertEl.style.display = 'none'; }, 7000);
+      if (res.success) {
+        document.getElementById('circularTitle').value   = '';
+        document.getElementById('circularRefNo').value   = '';
+        document.getElementById('circularRemarks').value = '';
+        document.getElementById('circularFileNameDisplay').textContent = '';
+        selectedCircularFile = null;
+        loadCirculars();
+      }
+    }).catch(function() {
+      btn.disabled = false; btn.innerHTML = '📤&nbsp; Upload Circular';
+      alert('Server error. Please try again.');
+    });
+  };
+  reader.readAsDataURL(selectedCircularFile);
+}
+
+// ── Custom sub-component ──────────────────────────────────────
+function toggleCustomSub(e) {
+  e.preventDefault();
+  var g = document.getElementById('customSubGroup');
+  g.style.display = (g.style.display === 'none' ? 'block' : 'none');
+}
+
+function saveCustomSubComponent() {
+  var comp = document.getElementById('componentSelect').value;
+  var name = document.getElementById('customSubName').value.trim();
+  var desc = document.getElementById('customSubDesc').value.trim();
+  if (!comp) { alert('Please select a component first.'); return; }
+  if (!name) { alert('Sub-component name is required.');  return; }
+
+  api('addSubComponent', SESSION.token, comp, name, desc)
+    .then(function(res) {
+      if (!res.success) { alert(res.message); return; }
+      // Add to dropdown and select it
+      var sub = document.getElementById('subComponentSelect');
+      var opt = document.createElement('option');
+      opt.value = name; opt.textContent = name; opt.dataset.desc = desc;
+      sub.appendChild(opt);
+      sub.value = name;
+      if (desc) document.getElementById('descriptionInput').value = desc;
+      // Hide custom form & clear
+      document.getElementById('customSubGroup').style.display = 'none';
+      document.getElementById('customSubName').value = '';
+      document.getElementById('customSubDesc').value = '';
+      alert('Sub-component "' + name + '" saved and selected!');
     });
 }
 
