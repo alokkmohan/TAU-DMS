@@ -5,14 +5,14 @@ function setupAllSheets() {
 
   const schema = {
     'Users': [
-      'email', 'name', 'role', 'component_access', 'folder_id', 'created_at', 'is_active'
+      'email', 'name', 'role', 'state', 'state_group', 'component_access', 'folder_id', 'created_at', 'is_active'
     ],
     'Documents': [
       'doc_id', 'uploader_email', 'uploader_name', 'component', 'sub_component',
       'subject', 'description', 'file_name', 'drive_link', 'year', 'month',
       'status', 'tl_verified_by', 'tl_verified_at', 'tl_remark',
       'admin_approved_by', 'admin_approved_at', 'admin_remark', 'uploaded_at',
-      'target_component'
+      'target_component', 'state'
     ],
     'Dropdowns': [
       'component', 'sub_component', 'description', 'template_link'

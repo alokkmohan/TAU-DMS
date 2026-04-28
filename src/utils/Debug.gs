@@ -53,6 +53,38 @@ function debugCheckUsersSheet() {
   });
 }
 
+// ── Run once: add state + state_group columns to Users sheet ──
+function migrateUsersSheet() {
+  const ss      = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+  const sheet   = ss.getSheetByName(CONFIG.TABS.USERS);
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const toAdd   = ['state', 'state_group'].filter(h => !headers.includes(h));
+  if (toAdd.length === 0) { Logger.log('Users columns already exist.'); return; }
+  toAdd.forEach(col => {
+    const nextCol = sheet.getLastColumn() + 1;
+    sheet.getRange(1, nextCol).setValue(col)
+      .setBackground('#1a237e').setFontColor('#ffffff').setFontWeight('bold');
+    Logger.log('Added column: ' + col + ' at position ' + nextCol);
+  });
+  Logger.log('✅ Users sheet migration done.');
+}
+
+// ── Run once: add state column to Documents sheet ──
+function migrateDocumentsSheet() {
+  const ss      = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+  const sheet   = ss.getSheetByName(CONFIG.TABS.DOCUMENTS);
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const toAdd   = ['target_component', 'state'].filter(h => !headers.includes(h));
+  if (toAdd.length === 0) { Logger.log('Documents columns already exist.'); return; }
+  toAdd.forEach(col => {
+    const nextCol = sheet.getLastColumn() + 1;
+    sheet.getRange(1, nextCol).setValue(col)
+      .setBackground('#1a237e').setFontColor('#ffffff').setFontWeight('bold');
+    Logger.log('Added column: ' + col + ' at position ' + nextCol);
+  });
+  Logger.log('✅ Documents sheet migration done.');
+}
+
 // ── Run once to add target_component column header to Documents sheet ──
 function addTargetComponentColumn() {
   const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
