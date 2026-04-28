@@ -2,7 +2,7 @@
 const CONFIG = {
   SHEET_ID: '110GnDeFCrE9PijXhrBAWYpXQ6iZNXy1ON6cNfnyh6Ik',
   ROOT_FOLDER_ID: '1VXGx0oZmCSxG7uAta2m0XXlzhLsONCzW',
-  DOMAIN: 'educategirls.ngo',
+  DOMAINS: ['educategirls.ngo', 'up.egtau.org'],
   OTP_EXPIRY_MINUTES: 10,
   SYSTEM_NAME: 'DMS — UP Shiksha Vibhag',
 

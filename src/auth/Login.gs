@@ -3,7 +3,7 @@ function sendOTP(email) {
     email = email.trim().toLowerCase();
 
     if (!isValidDomain(email)) {
-      return errorResponse('Only ' + CONFIG.DOMAIN + ' email addresses are allowed.');
+      return errorResponse('Only ' + CONFIG.DOMAINS.join(' or ') + ' email addresses are allowed.');
     }
 
     const user = getUserByEmail(email);

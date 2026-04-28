@@ -256,7 +256,7 @@
     <div id="emailSection">
       <div class="form-group">
         <label for="emailInput">Your Email Address</label>
-        <input type="email" id="emailInput" placeholder="yourname@educategirls.ngo" autocomplete="email">
+        <input type="email" id="emailInput" placeholder="yourname@educategirls.ngo or @up.egtau.org" autocomplete="email">
       </div>
       <button class="btn btn-primary" id="sendOtpBtn" onclick="sendOTP()">Send OTP</button>
     </div>
@@ -528,8 +528,9 @@ function setLoginLoading(btnId, loading, label) {
 function sendOTP() {
   var email = document.getElementById('emailInput').value.trim().toLowerCase();
   if (!email) { showLoginMsg('Please enter your email address.', 'error'); return; }
-  if (!email.endsWith('@educategirls.ngo')) {
-    showLoginMsg('Only @educategirls.ngo email addresses are allowed.', 'error'); return;
+  var validDomains = ['educategirls.ngo', 'up.egtau.org'];
+  if (!validDomains.some(function(d){ return email.endsWith('@' + d); })) {
+    showLoginMsg('Only @educategirls.ngo or @up.egtau.org email addresses are allowed.', 'error'); return;
   }
   setLoginLoading('sendOtpBtn', true, 'Send OTP');
   document.getElementById('loginMsg').style.display = 'none';

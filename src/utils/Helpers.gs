@@ -14,7 +14,8 @@ function generateCircularId() {
 }
 
 function isValidDomain(email) {
-  return email.endsWith('@' + CONFIG.DOMAIN);
+  const lower = email.toLowerCase();
+  return CONFIG.DOMAINS.some(d => lower.endsWith('@' + d.toLowerCase()));
 }
 
 function getCurrentISTTime() {
