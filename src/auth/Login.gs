@@ -3,12 +3,12 @@ function sendOTP(email) {
     email = email.trim().toLowerCase();
 
     if (!isValidDomain(email)) {
-      return errorResponse('Sirf ' + CONFIG.DOMAIN + ' email allowed hai.');
+      return errorResponse('Only ' + CONFIG.DOMAIN + ' email addresses are allowed.');
     }
 
     const user = getUserByEmail(email);
     if (!user) {
-      return errorResponse('Aapka email registered nahi hai. Admin se contact karein.');
+      return errorResponse('This email is not registered. Please contact the administrator.');
     }
 
     // Clear old OTPs for this email
@@ -29,11 +29,11 @@ function sendOTP(email) {
 
     writeAuditLog(email, user.name, 'OTP_SENT', '', '');
 
-    return successResponse({ message: 'OTP aapke email par bheja gaya hai.' });
+    return successResponse({ message: 'OTP sent successfully to your email.' });
 
   } catch (e) {
     console.error('sendOTP error:', e);
-    return errorResponse('OTP bhejne mein problem aayi. Dobara try karein.');
+    return errorResponse('Failed to send OTP. Please try again.');
   }
 }
 
@@ -70,7 +70,7 @@ function verifyOTP(email, enteredOTP) {
     }
 
     if (matchRow === -1) {
-      return errorResponse('OTP galat hai ya expire ho gaya. Dobara OTP mangaein.');
+      return errorResponse('Invalid or expired OTP. Please request a new one.');
     }
 
     // Mark OTP as used
@@ -89,19 +89,22 @@ function verifyOTP(email, enteredOTP) {
 
   } catch (e) {
     console.error('verifyOTP error:', e);
-    return errorResponse('Verification mein problem aayi. Dobara try karein.');
+    return errorResponse('Verification failed. Please try again.');
   }
 }
 
 function _sendOTPEmail(email, name, otp) {
-  const subject = CONFIG.SYSTEM_NAME + ' — Login OTP';
+  const subject = 'Document Management System: Your Login OTP';
   const body =
-    'Namaste ' + name + ',\n\n' +
-    'Aapka Login OTP hai:\n\n' +
-    '  ' + otp + '\n\n' +
-    'Yeh OTP ' + CONFIG.OTP_EXPIRY_MINUTES + ' minute mein expire ho jaayega.\n' +
-    'Kisi ke saath share mat karein.\n\n' +
-    '— ' + CONFIG.SYSTEM_NAME;
+    'Dear ' + name + ',\n\n' +
+    'You have requested a One-Time Password (OTP) to log in to the Document Management System.\n\n' +
+    'Your OTP is:\n\n' +
+    '        ' + otp + '\n\n' +
+    'This OTP is valid for ' + CONFIG.OTP_EXPIRY_MINUTES + ' minutes. Please do not share it with anyone.\n\n' +
+    'If you did not request this OTP, please ignore this email.\n\n' +
+    'Regards,\n' +
+    'Technical Assistant Unit\n' +
+    'Educate Girls';
 
   GmailApp.sendEmail(email, subject, body);
 }
