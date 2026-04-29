@@ -321,6 +321,27 @@
               </select>
             </div>
           </div>
+          <!-- Custom component (if not in list) -->
+          <div id="customCompGroup" style="display:none;margin-top:-8px;margin-bottom:8px;padding:10px 12px;background:#f3f4f6;border-radius:6px;border:1px dashed #9e9e9e">
+            <div style="font-size:0.85rem;color:#555;margin-bottom:6px">➕ Add new component (first sub-component bhi zaroori hai)</div>
+            <div class="form-row" style="gap:8px">
+              <div class="form-group" style="margin-bottom:0">
+                <input type="text" id="customCompName" placeholder="Component name *">
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <input type="text" id="customCompFirstSub" placeholder="First sub-component *">
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <input type="text" id="customCompDesc" placeholder="Short description (optional)">
+              </div>
+              <button class="btn btn-outline btn-sm" style="align-self:center;white-space:nowrap" onclick="saveCustomComponent()">Save &amp; Use</button>
+            </div>
+          </div>
+          <div style="margin-bottom:4px">
+            <a href="#" style="font-size:0.82rem;color:#1565c0;text-decoration:none" onclick="toggleCustomComp(event)">
+              ➕ Component not in list? Add new
+            </a>
+          </div>
           <!-- Custom sub-component (if not in list) -->
           <div id="customSubGroup" style="display:none;margin-top:-8px;margin-bottom:8px;padding:10px 12px;background:#f3f4f6;border-radius:6px;border:1px dashed #9e9e9e">
             <div style="font-size:0.85rem;color:#555;margin-bottom:6px">➕ Add new sub-component to list (one-time)</div>
@@ -589,7 +610,7 @@
 // ════════════════════════════════════════════════
 //  CONFIG — update GAS_URL after each new deployment
 // ════════════════════════════════════════════════
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbxJM5VjLUSg3b-g0zGOObCXG-HS7ha_D373JJ162GnGEV_2E3bLlVqYN4kQ_oAetEKZng/exec';
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbw0aEN88Nbcr_hI32ZgRyR9P3XtCeQdRW9YDpJoqFLbcd5LR9Du7gQulhRim9OO0IgiAg/exec';
 
 // ════════════════════════════════════════════════
 //  API HELPER  (replaces google.script.run)
@@ -1273,6 +1294,37 @@ function submitCircular() {
     });
   };
   reader.readAsDataURL(selectedCircularFile);
+}
+
+// ── Custom component ──────────────────────────────────────────
+function toggleCustomComp(e) {
+  e.preventDefault();
+  var g = document.getElementById('customCompGroup');
+  g.style.display = (g.style.display === 'none' ? 'block' : 'none');
+}
+
+function saveCustomComponent() {
+  var name     = document.getElementById('customCompName').value.trim();
+  var firstSub = document.getElementById('customCompFirstSub').value.trim();
+  var desc     = document.getElementById('customCompDesc').value.trim();
+  if (!name)     { alert('Component name is required.');           return; }
+  if (!firstSub) { alert('First sub-component name is required.'); return; }
+
+  api('addComponent', SESSION.token, name, firstSub, desc)
+    .then(function(res) {
+      if (!res.success) { alert(res.message); return; }
+      var compSel = document.getElementById('componentSelect');
+      var opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      compSel.appendChild(opt);
+      compSel.value = name;
+      document.getElementById('customCompGroup').style.display = 'none';
+      document.getElementById('customCompName').value = '';
+      document.getElementById('customCompFirstSub').value = '';
+      document.getElementById('customCompDesc').value = '';
+      loadSubComponents();
+      alert('Component "' + name + '" saved and selected!');
+    });
 }
 
 // ── Custom sub-component ──────────────────────────────────────
