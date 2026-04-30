@@ -1,3 +1,44 @@
+// ── OTP Rate Limiting ─────────────────────────────────────────
+const OTP_MAX_ATTEMPTS  = 5;
+const OTP_LOCK_MINUTES  = 15;
+const OTP_ATTEMPT_PREFIX = 'OTP_ATTEMPT_';
+
+function _getAttemptData(email) {
+  const raw = PropertiesService.getScriptProperties().getProperty(OTP_ATTEMPT_PREFIX + email);
+  return raw ? JSON.parse(raw) : { count: 0, lockedUntil: 0 };
+}
+
+function _saveAttemptData(email, data) {
+  PropertiesService.getScriptProperties().setProperty(OTP_ATTEMPT_PREFIX + email, JSON.stringify(data));
+}
+
+function _clearAttemptData(email) {
+  PropertiesService.getScriptProperties().deleteProperty(OTP_ATTEMPT_PREFIX + email);
+}
+
+function _checkRateLimit(email) {
+  const data = _getAttemptData(email);
+  const now  = new Date().getTime();
+  if (data.lockedUntil && now < data.lockedUntil) {
+    const minsLeft = Math.ceil((data.lockedUntil - now) / 60000);
+    throw new Error('Too many failed attempts. Please try again after ' + minsLeft + ' minutes.');
+  }
+}
+
+function _recordFailedAttempt(email) {
+  const data = _getAttemptData(email);
+  const now  = new Date().getTime();
+  // Reset count if previous lock has expired
+  if (data.lockedUntil && now >= data.lockedUntil) {
+    data.count = 0; data.lockedUntil = 0;
+  }
+  data.count += 1;
+  if (data.count >= OTP_MAX_ATTEMPTS) {
+    data.lockedUntil = now + OTP_LOCK_MINUTES * 60 * 1000;
+  }
+  _saveAttemptData(email, data);
+}
+
 function sendOTP(email) {
   try {
     email = email.trim().toLowerCase();
@@ -10,6 +51,9 @@ function sendOTP(email) {
     if (!user) {
       return errorResponse('This email is not registered. Please contact the administrator.');
     }
+
+    // Check rate limit before sending
+    _checkRateLimit(email);
 
     // Clear old OTPs for this email
     _clearOldOTPs(email);
@@ -33,7 +77,7 @@ function sendOTP(email) {
 
   } catch (e) {
     console.error('sendOTP error:', e);
-    return errorResponse('Failed to send OTP. Please try again.');
+    return errorResponse(e.message || 'Failed to send OTP. Please try again.');
   }
 }
 
@@ -41,6 +85,9 @@ function verifyOTP(email, enteredOTP) {
   try {
     email = email.trim().toLowerCase();
     enteredOTP = enteredOTP.trim();
+
+    // Check rate limit before verifying
+    _checkRateLimit(email);
 
     const sheet = getSheet(CONFIG.TABS.OTP_STORE);
     const data = sheet.getDataRange().getValues();
@@ -70,11 +117,18 @@ function verifyOTP(email, enteredOTP) {
     }
 
     if (matchRow === -1) {
-      return errorResponse('Invalid or expired OTP. Please request a new one.');
+      _recordFailedAttempt(email);
+      const data = _getAttemptData(email);
+      const remaining = OTP_MAX_ATTEMPTS - data.count;
+      if (data.lockedUntil) {
+        return errorResponse('Too many failed attempts. Account locked for ' + OTP_LOCK_MINUTES + ' minutes.');
+      }
+      return errorResponse('Invalid or expired OTP. ' + remaining + ' attempt(s) remaining.');
     }
 
-    // Mark OTP as used
+    // Mark OTP as used and clear failed attempts on success
     sheet.getRange(matchRow, usedCol + 1).setValue(true);
+    _clearAttemptData(email);
 
     const user        = getUserByEmail(email);
     const userState   = user.state       || '';
@@ -94,7 +148,7 @@ function verifyOTP(email, enteredOTP) {
 
   } catch (e) {
     console.error('verifyOTP error:', e);
-    return errorResponse('Verification failed. Please try again.');
+    return errorResponse(e.message || 'Verification failed. Please try again.');
   }
 }
 
