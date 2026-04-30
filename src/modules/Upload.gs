@@ -109,6 +109,46 @@ function getAllComponents(token) {
   }
 }
 
+// ── Get users current user can share with individually ─────────
+function getShareableUsers(token) {
+  try {
+    const session = requireAuth(token);
+    const users   = getSheetData(CONFIG.TABS.USERS).filter(u => u.is_active === true);
+    const myState = session.state || '';
+    const myGroup = session.state_group || getStateGroup(myState);
+    let filtered  = [];
+
+    switch (session.role) {
+      case CONFIG.ROLES.TEAM_LEAD:
+        filtered = users.filter(u => u.role === CONFIG.ROLES.MANAGER && u.state === myState);
+        break;
+      case CONFIG.ROLES.STATE_LEAD:
+        filtered = users.filter(u => u.role === CONFIG.ROLES.TEAM_LEAD && u.state === myState);
+        break;
+      case CONFIG.ROLES.PROJECT_MANAGER: {
+        const groupStates = CONFIG.STATE_GROUPS[myGroup] || [];
+        filtered = users.filter(u =>
+          (u.role === CONFIG.ROLES.STATE_LEAD || u.role === CONFIG.ROLES.TEAM_LEAD) &&
+          groupStates.includes(u.state)
+        );
+        break;
+      }
+      case CONFIG.ROLES.CEO:
+      case CONFIG.ROLES.SUPER_ADMIN:
+        filtered = users.filter(u =>
+          u.role === CONFIG.ROLES.STATE_LEAD || u.role === CONFIG.ROLES.PROJECT_MANAGER
+        );
+        break;
+    }
+
+    return successResponse(filtered.map(u => ({
+      email: u.email, name: u.name, role: u.role, state: u.state
+    })));
+  } catch (e) {
+    return errorResponse(e.message);
+  }
+}
+
 function _getUserComponentAccess(email) {
   const users  = getSheetData(CONFIG.TABS.USERS);
   const user   = users.find(u => u.email === email);
@@ -148,19 +188,26 @@ function uploadDocument(token, payload) {
     const users    = getSheetData(CONFIG.TABS.USERS);
     const uploader = users.find(u => u.email === session.email);
 
-    if (session.role === CONFIG.ROLES.MANAGER ||
-        session.role === CONFIG.ROLES.TEAM_LEAD ||
-        session.role === CONFIG.ROLES.STATE_LEAD) {
-      // Own state — so state-level visibility
+    if (session.role === CONFIG.ROLES.MANAGER) {
       docState = uploader ? (uploader.state || '') : '';
-
-    } else if (session.role === CONFIG.ROLES.PROJECT_MANAGER) {
-      // Group-level visibility (e.g. GROUP_6A)
-      docState = session.state_group ? ('GROUP_' + session.state_group) : '';
-
-    } else if (session.role === CONFIG.ROLES.CEO || session.role === CONFIG.ROLES.SUPER_ADMIN) {
-      // Admin selects audience: ALL / GROUP_6A / GROUP_6B / specific state
-      docState = targetAudience || 'ALL';
+    } else {
+      // Privileged roles: use targetAudience from frontend with smart defaults
+      if (targetAudience && targetAudience.trim() !== '') {
+        docState = targetAudience.trim();
+      } else {
+        const myState = uploader ? (uploader.state || '') : '';
+        const myGroup = session.state_group || getStateGroup(myState);
+        switch (session.role) {
+          case CONFIG.ROLES.TEAM_LEAD:
+            docState = 'MANAGERS:' + myState; break;
+          case CONFIG.ROLES.STATE_LEAD:
+            docState = 'TEAM_LEADS:' + myState; break;
+          case CONFIG.ROLES.PROJECT_MANAGER:
+            docState = 'STATE_LEADS:' + myGroup; break;
+          default:
+            docState = 'ALL';
+        }
+      }
     }
 
     // Optional component-level sharing
@@ -231,60 +278,62 @@ function getDocuments(token, filters) {
     const myState  = (session.state || '').toLowerCase();
     const myGroup  = session.state_group || getStateGroup(session.state || '');
 
+    // ── Audience match helper ──────────────────────────────────
+    function matchesAudience(ta) {
+      if (!ta) return false;
+      if (ta === 'ALL') return true;
+      if (ta === 'EMAIL:' + session.email) return true;
+
+      // Legacy plain state name (e.g. 'UP') or GROUP_ prefix
+      if (ta.startsWith('GROUP_')) return ta === 'GROUP_' + myGroup;
+      if (!ta.includes(':')) return ta.toLowerCase() === myState;
+
+      const sep   = ta.indexOf(':');
+      const type  = ta.substring(0, sep);
+      const scope = ta.substring(sep + 1);
+      const groupNames = Object.keys(CONFIG.STATE_GROUPS);
+
+      switch (type) {
+        case 'MANAGERS':
+          return role === CONFIG.ROLES.MANAGER && scope === (session.state || '');
+        case 'TEAM_LEADS':
+          if (role !== CONFIG.ROLES.TEAM_LEAD) return false;
+          if (scope === 'ALL') return true;
+          return groupNames.includes(scope) ? scope === myGroup : scope === (session.state || '');
+        case 'STATE_LEADS':
+          if (role !== CONFIG.ROLES.STATE_LEAD) return false;
+          return scope === 'ALL' || scope === myGroup;
+        case 'PROJECT_MANAGERS':
+          if (role !== CONFIG.ROLES.PROJECT_MANAGER) return false;
+          return scope === 'ALL' || scope === myGroup;
+      }
+      return false;
+    }
+
     // ── Visibility helper ──────────────────────────────────────
     function isVisible(r) {
       const docState = (r.state || '').trim();
 
+      // Own uploads always visible
+      if (r.uploader_email === session.email) return true;
+
+      // Status gate: STATE_LEAD, PM, CEO only see tl_verified+
+      const viewOnlyRoles = [CONFIG.ROLES.STATE_LEAD, CONFIG.ROLES.PROJECT_MANAGER, CONFIG.ROLES.CEO];
+      const approvedStatuses = [CONFIG.STATUS.TL_VERIFIED, CONFIG.STATUS.ADMIN_APPROVED, CONFIG.STATUS.ARCHIVED];
+      if (viewOnlyRoles.includes(role) && !approvedStatuses.includes(r.status)) return false;
+
+      if (role === CONFIG.ROLES.SUPER_ADMIN) return true;
+
+      // Component-based sharing (target_component)
       if (role === CONFIG.ROLES.MANAGER) {
-        // 1. Own uploads
-        if (r.uploader_email === session.email) return true;
-        // 2. Docs shared by component (target_component)
         const userAccess = _getUserComponentAccess(session.email);
         const tc = (r.target_component || '').trim().toUpperCase();
         if (tc === 'ALL') return true;
         if (tc && userAccess !== 'ALL' && tc === userAccess.toUpperCase()) return true;
         if (tc && userAccess === 'ALL') return true;
-        // 3. Privileged-role broadcast docs visible to this manager
-        if (docState === 'ALL') return true;
-        if (myGroup && docState === 'GROUP_' + myGroup) return true;
-        if (docState && docState.toLowerCase() === myState) return true;
-        return false;
       }
 
-      if (role === CONFIG.ROLES.TEAM_LEAD) {
-        // TL sees all docs in their state (including pending — for verification)
-        if (docState === 'ALL') return true;
-        if (myGroup && docState === 'GROUP_' + myGroup) return true;
-        return docState.toLowerCase() === myState;
-      }
-
-      if (role === CONFIG.ROLES.STATE_LEAD) {
-        // State Lead sees only tl_verified+ docs in their state (not pending)
-        const approvedStatuses = [CONFIG.STATUS.TL_VERIFIED, CONFIG.STATUS.ADMIN_APPROVED, CONFIG.STATUS.ARCHIVED];
-        if (!approvedStatuses.includes(r.status)) return false;
-        if (docState === 'ALL') return true;
-        if (myGroup && docState === 'GROUP_' + myGroup) return true;
-        return docState.toLowerCase() === myState;
-      }
-
-      if (role === CONFIG.ROLES.PROJECT_MANAGER) {
-        // PM sees only tl_verified+ docs in their state_group (not pending)
-        const approvedStatuses = [CONFIG.STATUS.TL_VERIFIED, CONFIG.STATUS.ADMIN_APPROVED, CONFIG.STATUS.ARCHIVED];
-        if (!approvedStatuses.includes(r.status)) return false;
-        const groupStates = (CONFIG.STATE_GROUPS[myGroup] || []).map(s => s.toLowerCase());
-        if (docState === 'ALL') return true;
-        if (docState === 'GROUP_' + myGroup) return true;
-        return groupStates.includes(docState.toLowerCase());
-      }
-
-      if (role === CONFIG.ROLES.CEO) {
-        // CEO sees only tl_verified+ docs (not pending)
-        const approvedStatuses = [CONFIG.STATUS.TL_VERIFIED, CONFIG.STATUS.ADMIN_APPROVED, CONFIG.STATUS.ARCHIVED];
-        return approvedStatuses.includes(r.status);
-      }
-
-      // super_admin → see everything
-      return true;
+      return matchesAudience(docState);
     }
 
     rows = rows.filter(isVisible);

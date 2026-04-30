@@ -27,6 +27,7 @@ function _route(action, p) {
     case 'getComponents':     return getComponents(p[0]);
     case 'getSubComponents':  return getSubComponents(p[0], p[1]);
     case 'getAllComponents':   return getAllComponents(p[0]);
+    case 'getShareableUsers':  return getShareableUsers(p[0]);
     case 'addComponent':      return addComponent(p[0], p[1], p[2], p[3]);
     case 'addSubComponent':   return addSubComponent(p[0], p[1], p[2], p[3]);
     case 'uploadDocument':    return uploadDocument(p[0], p[1]);

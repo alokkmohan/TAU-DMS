@@ -384,37 +384,24 @@
                    accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png"
                    onchange="handleFileSelect(this)">
           </div>
-          <!-- Share / Target Audience — shown for privileged roles only -->
+          <!-- Share With — shown for privileged roles only -->
           <div id="shareWithGroup" style="display:none">
-            <div id="targetAudienceRow" class="form-group" style="display:none">
+            <div class="form-group">
               <label>📢 Share With <span style="color:#c62828">*</span></label>
-              <select id="targetAudienceSelect">
-                <option value="ALL">Everyone (All States)</option>
-                <option value="GROUP_6A">Group 6A — UP, MP, Bihar, Jharkhand, Rajasthan, CG</option>
-                <option value="GROUP_6B">Group 6B — Maharashtra, Telangana, WB, Odisha, AP, Assam</option>
-                <option value="UP">State: Uttar Pradesh</option>
-                <option value="MP">State: Madhya Pradesh</option>
-                <option value="Bihar">State: Bihar</option>
-                <option value="Jharkhand">State: Jharkhand</option>
-                <option value="Rajasthan">State: Rajasthan</option>
-                <option value="Chhattisgarh">State: Chhattisgarh</option>
-                <option value="Maharashtra">State: Maharashtra</option>
-                <option value="Telangana">State: Telangana</option>
-                <option value="West Bengal">State: West Bengal</option>
-                <option value="Odisha">State: Odisha</option>
-                <option value="Andhra Pradesh">State: Andhra Pradesh</option>
-                <option value="Assam">State: Assam</option>
+              <select id="targetAudienceSelect" onchange="onShareWithChange()">
+                <!-- Populated by buildShareWithOptions() -->
               </select>
             </div>
-            <div id="targetAudienceNote" class="form-group" style="display:none">
-              <div style="background:#e8f5e9;border-left:4px solid #2e7d32;padding:8px 12px;border-radius:4px;font-size:0.9rem;color:#2e7d32">
-                📢 <span id="targetAudienceNoteText"></span>
-              </div>
+            <div id="specificPersonRow" class="form-group" style="display:none">
+              <label>Select Person <span style="color:#c62828">*</span></label>
+              <select id="specificPersonSelect">
+                <option value="">— Select person —</option>
+              </select>
             </div>
             <div class="form-group">
               <label>Share With Component <span style="color:#9e9e9e;font-weight:400">(optional)</span></label>
               <select id="targetComponentSelect">
-                <option value="">— None (state-based visibility only) —</option>
+                <option value="">— None —</option>
               </select>
             </div>
           </div>
@@ -828,6 +815,7 @@ function showSection(id) {
 //  UPLOAD
 // ════════════════════════════════════════════════
 var selectedFile = null;
+var _shareableUsers = [];
 
 function loadComponents() {
   var shareGroup = document.getElementById('shareWithGroup');
@@ -836,31 +824,9 @@ function loadComponents() {
     var isPrivileged = (r === 'team_lead' || r === 'state_lead' ||
                         r === 'project_manager' || r === 'ceo' || r === 'super_admin');
     shareGroup.style.display = isPrivileged ? 'block' : 'none';
-
-    // CEO / super_admin: show audience dropdown
-    var audienceRow  = document.getElementById('targetAudienceRow');
-    var audienceNote = document.getElementById('targetAudienceNote');
-    var noteText     = document.getElementById('targetAudienceNoteText');
-    if (audienceRow)  audienceRow.style.display  = 'none';
-    if (audienceNote) audienceNote.style.display = 'none';
-
-    if (r === 'ceo' || r === 'super_admin') {
-      if (audienceRow) audienceRow.style.display = 'block';
-    } else if (r === 'project_manager') {
-      if (audienceNote && noteText) {
-        noteText.textContent = 'Document will be visible to all states in your Group ' + (SESSION.state_group || '') + '.';
-        audienceNote.style.display = 'block';
-      }
-    } else if (r === 'state_lead') {
-      if (audienceNote && noteText) {
-        noteText.textContent = 'Document will be visible to your entire state team (' + (SESSION.state || '') + ').';
-        audienceNote.style.display = 'block';
-      }
-    } else if (r === 'team_lead') {
-      if (audienceNote && noteText) {
-        noteText.textContent = 'Document will be visible to all managers in ' + (SESSION.state || 'your state') + '.';
-        audienceNote.style.display = 'block';
-      }
+    if (isPrivileged) {
+      buildShareWithOptions();
+      loadShareableUsers();
     }
   }
   api('getComponents', SESSION.token)
@@ -943,8 +909,15 @@ function submitUpload() {
     var base64 = ev.target.result.split(',')[1];
     var targetComponent = document.getElementById('targetComponentSelect')
       ? document.getElementById('targetComponentSelect').value : '';
-    var targetAudience = document.getElementById('targetAudienceSelect')
+    var taVal = document.getElementById('targetAudienceSelect')
       ? document.getElementById('targetAudienceSelect').value : '';
+    var targetAudience = (taVal === 'SPECIFIC')
+      ? (document.getElementById('specificPersonSelect').value || '')
+      : taVal;
+    if (taVal === 'SPECIFIC' && !targetAudience) {
+      showUploadAlert('Please select a specific person to share with.', 'error');
+      btn.disabled = false; btn.innerHTML = '📤&nbsp; Upload Document'; return;
+    }
     api('uploadDocument', SESSION.token, {
       component: component, subComponent: subComponent,
       subject: subject, description: description,
@@ -1294,6 +1267,75 @@ function submitCircular() {
     });
   };
   reader.readAsDataURL(selectedCircularFile);
+}
+
+// ── Share With helpers ────────────────────────────────────────
+function buildShareWithOptions() {
+  var sel = document.getElementById('targetAudienceSelect');
+  if (!sel) return;
+  var r     = SESSION.role;
+  var state = SESSION.state || '';
+  var group = SESSION.state_group || '';
+  var opts  = '';
+
+  if (r === 'team_lead') {
+    opts = '<option value="MANAGERS:' + state + '">All Managers (' + state + ')</option>' +
+           '<option value="SPECIFIC">Specific Manager...</option>';
+  } else if (r === 'state_lead') {
+    opts = '<option value="TEAM_LEADS:' + state + '">All Team Leads (' + state + ')</option>' +
+           '<option value="SPECIFIC">Specific Team Lead...</option>';
+  } else if (r === 'project_manager') {
+    opts = '<option value="STATE_LEADS:' + group + '">All State Leads (Group ' + group + ')</option>' +
+           '<option value="TEAM_LEADS:' + group + '">All Team Leads (Group ' + group + ')</option>' +
+           '<option value="SPECIFIC">Specific person...</option>';
+  } else if (r === 'ceo') {
+    opts = '<option value="PROJECT_MANAGERS:ALL">All Project Managers</option>' +
+           '<option value="PROJECT_MANAGERS:6A">Project Manager — Group 6A</option>' +
+           '<option value="PROJECT_MANAGERS:6B">Project Manager — Group 6B</option>' +
+           '<option value="STATE_LEADS:ALL">All State Leads</option>' +
+           '<option value="SPECIFIC">Specific State Lead...</option>';
+  } else if (r === 'super_admin') {
+    opts = '<option value="ALL">Everyone (All States)</option>' +
+           '<option value="GROUP_6A">Group 6A — UP, MP, Bihar, Jharkhand, Rajasthan, CG</option>' +
+           '<option value="GROUP_6B">Group 6B — Maharashtra, Telangana, WB, Odisha, AP, Assam</option>' +
+           '<option value="UP">State: Uttar Pradesh</option>' +
+           '<option value="MP">State: Madhya Pradesh</option>' +
+           '<option value="Bihar">State: Bihar</option>' +
+           '<option value="Jharkhand">State: Jharkhand</option>' +
+           '<option value="Rajasthan">State: Rajasthan</option>' +
+           '<option value="Chhattisgarh">State: Chhattisgarh</option>' +
+           '<option value="Maharashtra">State: Maharashtra</option>' +
+           '<option value="Telangana">State: Telangana</option>' +
+           '<option value="West Bengal">State: West Bengal</option>' +
+           '<option value="Odisha">State: Odisha</option>' +
+           '<option value="Andhra Pradesh">State: Andhra Pradesh</option>' +
+           '<option value="Assam">State: Assam</option>';
+  }
+  sel.innerHTML = opts;
+  onShareWithChange();
+}
+
+function loadShareableUsers() {
+  api('getShareableUsers', SESSION.token)
+    .then(function(res) {
+      if (!res.success) return;
+      _shareableUsers = res.data;
+      var sel = document.getElementById('specificPersonSelect');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">— Select person —</option>';
+      res.data.forEach(function(u) {
+        var o = document.createElement('option');
+        o.value = 'EMAIL:' + u.email;
+        o.textContent = u.name + ' (' + (u.role.replace('_', ' ')) + (u.state ? ', ' + u.state : '') + ')';
+        sel.appendChild(o);
+      });
+    });
+}
+
+function onShareWithChange() {
+  var val = document.getElementById('targetAudienceSelect').value;
+  var row = document.getElementById('specificPersonRow');
+  if (row) row.style.display = (val === 'SPECIFIC') ? 'block' : 'none';
 }
 
 // ── Custom component ──────────────────────────────────────────
