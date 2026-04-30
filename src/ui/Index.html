@@ -1016,7 +1016,7 @@ function renderDocsTable(tbodyId, rows, showUploader) {
   var role = SESSION.role;
   var isPrivilegedRole = (role !== 'manager');
   var canVerifyRole    = (role === 'team_lead' || role === 'state_lead' || role === 'super_admin');
-  var canApproveRole   = (role === 'state_lead' || role === 'project_manager' || role === 'ceo' || role === 'super_admin');
+  var canApproveRole   = (role === 'super_admin');
   var showState        = (role === 'project_manager' || role === 'ceo' || role === 'super_admin');
 
   tbody.innerHTML = rows.map(function(r, i) {

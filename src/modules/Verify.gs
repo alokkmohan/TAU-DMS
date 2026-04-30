@@ -64,14 +64,11 @@ function rejectDocument(token, docId, remark) {
   }
 }
 
-// ── State Lead / PM / CEO: Final approval ─────────────────────
+// ── Super Admin only: Final approval (TL verify is the normal final step) ──
 function approveDocument(token, docId) {
   try {
     const session = requireAuth(token);
-    requireRole(session, [
-      CONFIG.ROLES.STATE_LEAD, CONFIG.ROLES.PROJECT_MANAGER,
-      CONFIG.ROLES.CEO, CONFIG.ROLES.SUPER_ADMIN
-    ]);
+    requireRole(session, [CONFIG.ROLES.SUPER_ADMIN]);
 
     const rowNum = findRowIndex(CONFIG.TABS.DOCUMENTS, 'doc_id', docId);
     if (rowNum === -1) return errorResponse('Document not found.');
@@ -96,14 +93,11 @@ function approveDocument(token, docId) {
   }
 }
 
-// ── State Lead / PM / CEO: Reject after TL verification ───────
+// ── Super Admin only: Reject after TL verification ────────────
 function rejectApproval(token, docId, remark) {
   try {
     const session = requireAuth(token);
-    requireRole(session, [
-      CONFIG.ROLES.STATE_LEAD, CONFIG.ROLES.PROJECT_MANAGER,
-      CONFIG.ROLES.CEO, CONFIG.ROLES.SUPER_ADMIN
-    ]);
+    requireRole(session, [CONFIG.ROLES.SUPER_ADMIN]);
 
     if (!remark || !remark.trim()) return errorResponse('Rejection reason is required.');
 

@@ -251,22 +251,39 @@ function getDocuments(token, filters) {
         return false;
       }
 
-      if (role === CONFIG.ROLES.TEAM_LEAD || role === CONFIG.ROLES.STATE_LEAD) {
-        // All docs in their state + group broadcasts + global
+      if (role === CONFIG.ROLES.TEAM_LEAD) {
+        // TL sees all docs in their state (including pending — for verification)
+        if (docState === 'ALL') return true;
+        if (myGroup && docState === 'GROUP_' + myGroup) return true;
+        return docState.toLowerCase() === myState;
+      }
+
+      if (role === CONFIG.ROLES.STATE_LEAD) {
+        // State Lead sees only tl_verified+ docs in their state (not pending)
+        const approvedStatuses = [CONFIG.STATUS.TL_VERIFIED, CONFIG.STATUS.ADMIN_APPROVED, CONFIG.STATUS.ARCHIVED];
+        if (!approvedStatuses.includes(r.status)) return false;
         if (docState === 'ALL') return true;
         if (myGroup && docState === 'GROUP_' + myGroup) return true;
         return docState.toLowerCase() === myState;
       }
 
       if (role === CONFIG.ROLES.PROJECT_MANAGER) {
-        // All docs in their state_group states + their own group broadcast + global
+        // PM sees only tl_verified+ docs in their state_group (not pending)
+        const approvedStatuses = [CONFIG.STATUS.TL_VERIFIED, CONFIG.STATUS.ADMIN_APPROVED, CONFIG.STATUS.ARCHIVED];
+        if (!approvedStatuses.includes(r.status)) return false;
         const groupStates = (CONFIG.STATE_GROUPS[myGroup] || []).map(s => s.toLowerCase());
         if (docState === 'ALL') return true;
         if (docState === 'GROUP_' + myGroup) return true;
         return groupStates.includes(docState.toLowerCase());
       }
 
-      // CEO / super_admin → see everything
+      if (role === CONFIG.ROLES.CEO) {
+        // CEO sees only tl_verified+ docs (not pending)
+        const approvedStatuses = [CONFIG.STATUS.TL_VERIFIED, CONFIG.STATUS.ADMIN_APPROVED, CONFIG.STATUS.ARCHIVED];
+        return approvedStatuses.includes(r.status);
+      }
+
+      // super_admin → see everything
       return true;
     }
 
