@@ -599,7 +599,7 @@
 // ════════════════════════════════════════════════
 //  CONFIG — update GAS_URL after each new deployment
 // ════════════════════════════════════════════════
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbycxfNydKqkQeLLwH1bltD2WZio_VLvtJ5zzIC6aqn-qCzijNZvp5I-q8cVlY_uMfre7A/exec';
+var GAS_URL = 'PASTE_NEW_DEPLOYMENT_URL_HERE';
 
 // ════════════════════════════════════════════════
 //  API HELPER  (replaces google.script.run)
@@ -620,32 +620,14 @@ function api(action) {
 // ════════════════════════════════════════════════
 //  SESSION
 // ════════════════════════════════════════════════
-var SESSION = { token: null, role: null, name: null, email: null, state: null, state_group: null };
-
-var STATE_GROUPS = {
-  '6A': ['UP','MP','Bihar','Jharkhand','Rajasthan','Chhattisgarh'],
-  '6B': ['Maharashtra','Telangana','West Bengal','Odisha','Andhra Pradesh','Assam']
-};
-
-function getMyGroup(state) {
-  for (var g in STATE_GROUPS) {
-    var arr = STATE_GROUPS[g];
-    for (var i = 0; i < arr.length; i++) {
-      if (arr[i].toLowerCase() === (state || '').toLowerCase()) return g;
-    }
-  }
-  return '';
-}
+var SESSION = { token: null, role: null, name: null };
 
 function initApp() {
-  var token       = sessionStorage.getItem('dms_token');
-  var role        = sessionStorage.getItem('dms_role');
-  var name        = sessionStorage.getItem('dms_name');
-  var email       = sessionStorage.getItem('dms_email') || '';
-  var state       = sessionStorage.getItem('dms_state') || '';
-  var state_group = sessionStorage.getItem('dms_state_group') || '';
+  var token = sessionStorage.getItem('dms_token');
+  var role  = sessionStorage.getItem('dms_role');
+  var name  = sessionStorage.getItem('dms_name');
   if (token && role && name) {
-    SESSION = { token: token, role: role, name: name, email: email, state: state, state_group: state_group };
+    SESSION = { token: token, role: role, name: name };
     showDashboard();
   } else {
     showLoginPage();
@@ -657,35 +639,13 @@ function showLoginPage() {
   document.getElementById('dashboardPage').style.display = 'none';
 }
 
-var ROLE_LABELS = {
-  manager:         'Manager',
-  team_lead:       'Team Lead',
-  state_lead:      'State Lead',
-  project_manager: 'Project Manager',
-  ceo:             'CEO',
-  super_admin:     'Super Admin'
-};
-
-function getRoleBadge() {
-  var label = ROLE_LABELS[SESSION.role] || SESSION.role;
-  var state = SESSION.state || '';
-  var group = SESSION.state_group || '';
-
-  if (SESSION.role === 'project_manager') {
-    return label + (group ? ' — Group ' + group : '');
-  }
-  if (SESSION.role === 'ceo' || SESSION.role === 'super_admin') {
-    return label;
-  }
-  // manager / team_lead / state_lead — show state
-  return label + (state ? ' — ' + state : '');
-}
-
 function showDashboard() {
   document.getElementById('loginPage').style.display    = 'none';
   document.getElementById('dashboardPage').style.display = 'block';
   document.getElementById('userNameDisplay').textContent = SESSION.name;
-  document.getElementById('roleDisplay').textContent = getRoleBadge();
+  document.getElementById('roleDisplay').textContent =
+    SESSION.role === 'super_admin' ? 'Super Admin' :
+    SESSION.role === 'team_lead'   ? 'Team Lead'   : 'Manager';
   buildSidebar();
   loadComponents();
   populateYearFilters();
@@ -743,15 +703,10 @@ function verifyOTP() {
     .then(function(res) {
       setLoginLoading('verifyOtpBtn', false, 'Login');
       if (!res.success) { showLoginMsg(res.message, 'error'); return; }
-      sessionStorage.setItem('dms_token',       res.data.token);
-      sessionStorage.setItem('dms_role',        res.data.role);
-      sessionStorage.setItem('dms_name',        res.data.name);
-      sessionStorage.setItem('dms_email',       res.data.email       || currentEmail);
-      sessionStorage.setItem('dms_state',       res.data.state       || '');
-      sessionStorage.setItem('dms_state_group', res.data.state_group || '');
-      SESSION = { token: res.data.token, role: res.data.role, name: res.data.name,
-                  email: res.data.email || currentEmail,
-                  state: res.data.state || '', state_group: res.data.state_group || '' };
+      sessionStorage.setItem('dms_token', res.data.token);
+      sessionStorage.setItem('dms_role',  res.data.role);
+      sessionStorage.setItem('dms_name',  res.data.name);
+      SESSION = { token: res.data.token, role: res.data.role, name: res.data.name };
       showDashboard();
     })
     .catch(function() {
@@ -776,24 +731,14 @@ document.addEventListener('keydown', function(e) {
 //  SIDEBAR
 // ════════════════════════════════════════════════
 function buildSidebar() {
-  var r = SESSION.role;
-  var isPrivileged = (r === 'team_lead' || r === 'state_lead' ||
-                      r === 'project_manager' || r === 'ceo' || r === 'super_admin');
   var items = [
     { id: 'upload',   icon: '\u{1F4E4}', label: 'Upload Document' },
     { id: 'mydocs',   icon: '\u{1F4C1}', label: 'My Documents' }
   ];
-  if (r === 'team_lead' || r === 'state_lead') {
-    var stateLabel = SESSION.state ? ' (' + SESSION.state + ')' : '';
-    items.push({ id: 'alldocs', icon: '\u{1F4CB}', label: 'State Documents' + stateLabel });
-  } else if (r === 'project_manager') {
-    var groupLabel = SESSION.state_group ? ' (Group ' + SESSION.state_group + ')' : '';
-    items.push({ id: 'alldocs', icon: '\u{1F4CB}', label: 'Group Documents' + groupLabel });
-  } else if (r === 'ceo' || r === 'super_admin') {
+  if (SESSION.role === 'team_lead' || SESSION.role === 'super_admin') {
     items.push({ id: 'alldocs', icon: '\u{1F4CB}', label: 'All Documents' });
   }
-  var circLabel = (r === 'manager') ? 'Govt Letters' : 'Circulars & Orders';
-  items.push({ id: 'circulars', icon: '\u{1F4DC}', label: circLabel });
+  items.push({ id: 'circulars', icon: '\u{1F4E2}', label: 'Circulars' });
 
   document.getElementById('sidebar').innerHTML = items.map(function(item) {
     return '<div class=\"nav-item\" id=\"nav-' + item.id + '\" onclick=\"showSection(' + "'" + item.id + "'" + ')\">' +
@@ -817,19 +762,12 @@ function showSection(id) {
 //  UPLOAD
 // ════════════════════════════════════════════════
 var selectedFile = null;
-var _shareableUsers = [];
 
 function loadComponents() {
   var shareGroup = document.getElementById('shareWithGroup');
   if (shareGroup) {
-    var r = SESSION.role;
-    var isPrivileged = (r === 'team_lead' || r === 'state_lead' ||
-                        r === 'project_manager' || r === 'ceo' || r === 'super_admin');
-    shareGroup.style.display = isPrivileged ? 'block' : 'none';
-    if (isPrivileged) {
-      buildShareWithOptions();
-      loadShareableUsers();
-    }
+    shareGroup.style.display =
+      (SESSION.role === 'team_lead' || SESSION.role === 'super_admin') ? 'block' : 'none';
   }
   api('getComponents', SESSION.token)
     .then(function(res) {
@@ -911,21 +849,11 @@ function submitUpload() {
     var base64 = ev.target.result.split(',')[1];
     var targetComponent = document.getElementById('targetComponentSelect')
       ? document.getElementById('targetComponentSelect').value : '';
-    var taVal = document.getElementById('targetAudienceSelect')
-      ? document.getElementById('targetAudienceSelect').value : '';
-    var targetAudience = (taVal === 'SPECIFIC')
-      ? (document.getElementById('specificPersonSelect').value || '')
-      : taVal;
-    if (taVal === 'SPECIFIC' && !targetAudience) {
-      showUploadAlert('Please select a specific person to share with.', 'error');
-      btn.disabled = false; btn.innerHTML = '📤&nbsp; Upload Document'; return;
-    }
     api('uploadDocument', SESSION.token, {
       component: component, subComponent: subComponent,
       subject: subject, description: description,
       fileBase64: base64, fileName: selectedFile.name, mimeType: selectedFile.type,
-      targetComponent: targetComponent,
-      targetAudience: targetAudience
+      targetComponent: targetComponent
     })
     .then(function(res) {
       btn.disabled = false; btn.innerHTML = 'Upload Document';
@@ -968,7 +896,7 @@ function loadDocs() {
 }
 
 function loadAllDocs() {
-  document.getElementById('allDocsTableBody').innerHTML = '<tr><td colspan=\"9\" class=\"no-data\">Loading...</td></tr>';
+  document.getElementById('allDocsTableBody').innerHTML = '<tr><td colspan=\"8\" class=\"no-data\">Loading...</td></tr>';
   api('getDocuments', SESSION.token, getFilters('allFilter'))
     .then(function(res) { if (!res.success) return; renderDocsTable('allDocsTableBody', res.data, true); });
 }
@@ -988,67 +916,21 @@ function renderDocsTable(tbodyId, rows, showUploader) {
   if (!rows.length) {
     tbody.innerHTML = '<tr><td colspan=\"8\" class=\"no-data\">No documents found.</td></tr>'; return;
   }
-  var role = SESSION.role;
-  var isPrivilegedRole = (role !== 'manager');
-  var canVerifyRole    = (role === 'team_lead' || role === 'state_lead' || role === 'super_admin');
-  var canApproveRole   = (role === 'super_admin');
-  var showState        = (role === 'project_manager' || role === 'ceo' || role === 'super_admin');
-
   tbody.innerHTML = rows.map(function(r, i) {
-    var btns = '';
-    var isOwn = (r.uploader_email === SESSION.email);
-
-    // Download button
-    btns += '<a href=\"' + toDownloadUrl(r.drive_link) + '\" target=\"_blank\" class=\"btn btn-outline btn-sm\">↓</a> ';
-
-    // Verify / TL-Reject (pending docs, by TL/SL/admin)
-    if (canVerifyRole && r.status === 'pending') {
-      btns += '<button class=\"btn btn-success btn-sm\" onclick=\"verifyDoc(\'' + r.doc_id + '\')\">✔ Verify</button> ';
-      btns += '<button class=\"btn btn-danger btn-sm\" onclick=\"openRejectModal(\'' + r.doc_id + '\',\'tl\')\">✖ Reject</button> ';
-    }
-
-    // Approve / Admin-Reject (tl_verified docs, by SL/PM/CEO/admin)
-    if (canApproveRole && r.status === 'tl_verified') {
-      btns += '<button class=\"btn btn-success btn-sm\" onclick=\"approveDoc(\'' + r.doc_id + '\')\">✔ Approve</button> ';
-      btns += '<button class=\"btn btn-danger btn-sm\" onclick=\"openRejectModal(\'' + r.doc_id + '\',\'admin\')\">✖ Reject</button> ';
-    }
-
-    // Edit button:
-    //   Manager: only if status is pending AND own doc
-    //   Privileged roles: own docs anytime (their uploads bypass workflow)
-    //   Super_admin: any pending doc
-    var canEdit = false;
-    if (role === 'super_admin') canEdit = (r.status === 'pending');
-    else if (isOwn && role === 'manager') canEdit = (r.status === 'pending');
-    else if (isOwn && isPrivilegedRole)   canEdit = true;
-
-    if (canEdit) {
-      btns += '<button class=\"btn btn-outline btn-sm\" onclick=\"openEditModal(\'' + r.doc_id + '\',\'' + (r.subject||'').replace(/'/g,'') + '\',\'' + (r.description||'').replace(/'/g,'') + '\')\">✏</button> ';
-    }
-
-    // Delete button:
-    //   Manager: only pending own doc
-    //   Privileged: own doc anytime
-    //   Super_admin: any doc (handled server-side too)
-    var canDelete = false;
-    if (role === 'super_admin') canDelete = true;
-    else if (isOwn && role === 'manager') canDelete = (r.status === 'pending');
-    else if (isOwn && isPrivilegedRole)   canDelete = true;
-
-    if (canDelete) {
-      btns += '<button class=\"btn btn-danger btn-sm\" onclick=\"deleteDoc(\'' + r.doc_id + '\')\">🗑</button>';
-    }
-
+    var canVerify = (SESSION.role === 'team_lead' || SESSION.role === 'super_admin') && r.status === 'pending';
+    var verifyBtns = canVerify
+      ? '<button class=\"btn btn-success btn-sm\" onclick=\"verifyDoc(\'' + r.doc_id + '\')\">Verify</button> ' +
+        '<button class=\"btn btn-danger btn-sm\" onclick=\"openRejectModal(\'' + r.doc_id + '\')\">Reject</button>'
+      : '';
     return '<tr>' +
       '<td>' + (i + 1) + '</td>' +
-      (showUploader ? '<td>' + (r.uploader_name || '') + '</td>' : '') +
-      '<td>' + (r.subject || '') + '</td>' +
-      '<td>' + (r.component || '') + '</td>' +
-      '<td>' + (r.sub_component || '') + '</td>' +
-      (showState ? '<td>' + audienceLabel(r.state) + '</td>' : '') +
-      (showUploader ? '<td>' + (r.month||'') + ' ' + (r.year||'') + '</td>' : '<td>' + (r.month||'') + '</td><td>' + (r.year||'') + '</td>') +
+      (showUploader ? '<td>' + r.uploader_name + '</td>' : '') +
+      '<td>' + r.subject + '</td>' +
+      '<td>' + r.component + '</td>' +
+      '<td>' + r.sub_component + '</td>' +
+      (showUploader ? '<td>' + r.month + ' ' + r.year + '</td>' : '<td>' + r.month + '</td><td>' + r.year + '</td>') +
       '<td>' + statusBadge(r.status) + '</td>' +
-      '<td style=\"white-space:nowrap\">' + btns + '</td>' +
+      '<td><a href=\"' + toDownloadUrl(r.drive_link) + '\" target=\"_blank\" class=\"btn btn-outline btn-sm\">Download</a> ' + verifyBtns + '</td>' +
       '</tr>';
   }).join('');
 }
@@ -1069,14 +951,6 @@ function statusBadge(s) {
   return '<span class=\"badge ' + parts[0] + '\">' + parts[1] + '</span>';
 }
 
-function audienceLabel(state) {
-  if (!state) return '—';
-  if (state === 'ALL') return '🌐 All';
-  if (state === 'GROUP_6A') return '📦 Group 6A';
-  if (state === 'GROUP_6B') return '📦 Group 6B';
-  return state;
-}
-
 function clearFilters() {
   ['filterYear','filterMonth','filterComponent','filterStatus'].forEach(function(id){ document.getElementById(id).value=''; });
   document.getElementById('filterSearch').value=''; loadDocs();
@@ -1087,28 +961,18 @@ function clearAllFilters() {
 }
 
 // ════════════════════════════════════════════════
-//  VERIFY / APPROVE / REJECT / DELETE
+//  VERIFY / REJECT
 // ════════════════════════════════════════════════
-var rejectDocId   = null;
-var rejectType    = 'tl';   // 'tl' or 'admin'
+var rejectDocId = null;
 
 function verifyDoc(docId) {
-  if (!confirm('Mark this document as verified?')) return;
+  if (!confirm('Verify this document?')) return;
   api('verifyDocument', SESSION.token, docId)
     .then(function(res) { alert(res.success ? 'Document verified!' : res.message); loadAllDocs(); });
 }
 
-function approveDoc(docId) {
-  if (!confirm('Approve this document?')) return;
-  api('approveDocument', SESSION.token, docId)
-    .then(function(res) { alert(res.success ? 'Document approved!' : res.message); loadAllDocs(); });
-}
-
-function openRejectModal(docId, type) {
+function openRejectModal(docId) {
   rejectDocId = docId;
-  rejectType  = type || 'tl';
-  var title = document.getElementById('rejectModalTitle');
-  if (title) title.textContent = (rejectType === 'admin') ? 'Reject After Verification' : 'Reject Document';
   document.getElementById('rejectRemark').value = '';
   document.getElementById('rejectModal').classList.add('open');
 }
@@ -1116,90 +980,36 @@ function closeRejectModal() { document.getElementById('rejectModal').classList.r
 function confirmReject() {
   var remark = document.getElementById('rejectRemark').value.trim();
   if (!remark) { alert('Please enter a rejection reason.'); return; }
-  var action = (rejectType === 'admin') ? 'rejectApproval' : 'rejectDocument';
-  api(action, SESSION.token, rejectDocId, remark)
+  api('rejectDocument', SESSION.token, rejectDocId, remark)
     .then(function(res) { closeRejectModal(); alert(res.success ? 'Document rejected.' : res.message); loadAllDocs(); });
 }
 
-function deleteDoc(docId) {
-  if (!confirm('Delete this document? This cannot be undone.')) return;
-  api('deleteDocument', SESSION.token, docId)
-    .then(function(res) { alert(res.success ? 'Document deleted.' : res.message); loadDocs(); loadAllDocs(); });
-}
-
 // ════════════════════════════════════════════════
-//  EDIT DOCUMENT
-// ════════════════════════════════════════════════
-var editDocId = null;
-
-function openEditModal(docId, subject, description) {
-  editDocId = docId;
-  document.getElementById('editSubject').value     = subject || '';
-  document.getElementById('editDescription').value = description || '';
-  document.getElementById('editModal').classList.add('open');
-}
-function closeEditModal() { document.getElementById('editModal').classList.remove('open'); editDocId = null; }
-function confirmEdit() {
-  var subject = document.getElementById('editSubject').value.trim();
-  if (!subject) { alert('Subject is required.'); return; }
-  var description = document.getElementById('editDescription').value.trim();
-  api('updateDocument', SESSION.token, editDocId, { subject: subject, description: description })
-    .then(function(res) {
-      closeEditModal();
-      alert(res.success ? 'Document updated.' : res.message);
-      loadDocs(); loadAllDocs();
-    });
-}
-
-// ════════════════════════════════════════════════
-//  CIRCULARS / GOVT LETTERS
+//  CIRCULARS
 // ════════════════════════════════════════════════
 function loadCirculars() {
-  var isManager    = SESSION.role === 'manager';
-  var isPrivileged = !isManager;
-
-  // Show/hide upload form
-  var uploadCard = document.getElementById('circularUploadCard');
-  if (uploadCard) uploadCard.style.display = isPrivileged ? 'block' : 'none';
-
-  // Section title
-  var title = document.getElementById('circularSectionTitle');
-  if (title) title.innerHTML = isManager ? '📜 Govt Letters' : '📢 Circulars &amp; Orders';
-
-  document.getElementById('circularsTableBody').innerHTML = '<tr><td colspan=\"7\" class=\"no-data\">Loading...</td></tr>';
+  document.getElementById('circularsTableBody').innerHTML = '<tr><td colspan=\"6\" class=\"no-data\">Loading...</td></tr>';
   api('getCirculars', SESSION.token)
-    .then(function(res) { if (!res.success) return; renderCirculars(res.data, isManager); });
+    .then(function(res) { if (!res.success) return; renderCirculars(res.data); });
 }
 
-function renderCirculars(rows, isManager) {
+function renderCirculars(rows) {
   var tbody = document.getElementById('circularsTableBody');
-  if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan=\"7\" class=\"no-data\">No circulars found.</td></tr>'; return;
-  }
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan=\"6\" class=\"no-data\">No circulars found.</td></tr>'; return; }
   tbody.innerHTML = rows.map(function(r, i) {
-    var ackCell = '';
-    if (isManager) {
-      ackCell = r.acknowledged
-        ? '<span class=\"badge badge-verified\">✔ Read</span>'
-        : '<span class=\"badge badge-pending\">Pending</span>';
-    } else {
-      ackCell = '<span style=\"font-size:0.82rem;color:#555\">' + (r.ack_count||0) + '/' + (r.total_managers||0) + ' read</span>';
-    }
     var ackBtn = '';
-    if (isManager && !r.acknowledged) {
-      ackBtn = '<button class=\"btn btn-success btn-sm\" onclick=\"acknowledgeCircular(\'' + r.circular_id + '\', this)\">✔ Mark as Read</button>';
+    if (SESSION.role === 'manager') {
+      ackBtn = r.acknowledged
+        ? '<span style=\"color:#2e7d32;font-weight:600\">Acknowledged</span>'
+        : '<button class=\"btn btn-success btn-sm\" onclick=\"acknowledgeCircular(\'' + r.circular_id + '\', this)\">Mark as Read</button>';
+    } else {
+      ackBtn = '<span style=\"font-size:0.8rem;color:#757575\">' + r.ack_count + '/' + r.total_managers + ' acknowledged</span>';
     }
     return '<tr>' +
-      '<td>' + (i+1) + '</td>' +
-      '<td>' + (r.title||'') + '</td>' +
-      '<td>' + (r.ref_number||'—') + '</td>' +
-      '<td>' + (r.uploader_name||'') + '</td>' +
-      '<td>' + (r.uploaded_at||'') + '</td>' +
-      '<td>' + ackCell + '</td>' +
-      '<td style=\"white-space:nowrap\">' +
-        '<a href=\"' + toDownloadUrl(r.drive_link) + '\" target=\"_blank\" class=\"btn btn-outline btn-sm\">↓ Download</a> ' +
-        ackBtn +
-      '</td></tr>';
+      '<td>' + (i+1) + '</td><td>' + r.title + '</td><td>' + (r.ref_number||'—') + '</td>' +
+      '<td>' + r.uploaded_at + '</td>' +
+      '<td>' + (r.acknowledged ? '<span class=\"badge badge-verified\">Acknowledged</span>' : '<span class=\"badge badge-pending\">Pending</span>') + '</td>' +
+      '<td><a href=\"' + toDownloadUrl(r.drive_link) + '\" target=\"_blank\" class=\"btn btn-outline btn-sm\">Download</a> ' + ackBtn + '</td></tr>';
   }).join('');
 }
 
@@ -1207,199 +1017,8 @@ function acknowledgeCircular(circularId, btn) {
   btn.disabled = true; btn.textContent = '...';
   api('acknowledgeCircular', SESSION.token, circularId)
     .then(function(res) {
-      if (res.success) { loadCirculars(); }
-      else { btn.disabled = false; btn.textContent = '✔ Mark as Read'; alert(res.message); }
-    });
-}
-
-// ── Circular upload (TL / SL / PM / CEO / Admin) ──────────────
-var selectedCircularFile = null;
-
-function handleCircularFileSelect(input) {
-  if (input.files[0]) setCircularFile(input.files[0]);
-}
-function handleCircularDrop(e) {
-  e.preventDefault();
-  document.getElementById('circularFileDrop').classList.remove('drag-over');
-  if (e.dataTransfer.files[0]) setCircularFile(e.dataTransfer.files[0]);
-}
-function setCircularFile(file) {
-  if (file.size > 10 * 1024 * 1024) {
-    alert('File size exceeds 10 MB.'); return;
-  }
-  selectedCircularFile = file;
-  document.getElementById('circularFileNameDisplay').textContent =
-    file.name + ' (' + (file.size / (1024*1024)).toFixed(2) + ' MB)';
-}
-
-function submitCircular() {
-  var title    = document.getElementById('circularTitle').value.trim();
-  var refNo    = document.getElementById('circularRefNo').value.trim();
-  var remarks  = document.getElementById('circularRemarks').value.trim();
-  if (!title)                { alert('Title is required.');     return; }
-  if (!selectedCircularFile) { alert('Please attach a file.');  return; }
-
-  var btn = document.getElementById('circularUploadBtn');
-  btn.disabled = true; btn.innerHTML = '<span class=\"spinner\"></span>Uploading...';
-
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    var base64 = ev.target.result.split(',')[1];
-    api('uploadCircular', SESSION.token, {
-      title: title, refNumber: refNo, remarks: remarks,
-      fileBase64: base64, fileName: selectedCircularFile.name, mimeType: selectedCircularFile.type
-    }).then(function(res) {
-      btn.disabled = false; btn.innerHTML = '📤&nbsp; Upload Circular';
-      var alertEl = document.getElementById('circularAlert');
-      alertEl.textContent = res.success ? res.data.message : res.message;
-      alertEl.className   = 'alert alert-' + (res.success ? 'success' : 'error');
-      alertEl.style.display = 'block';
-      setTimeout(function() { alertEl.style.display = 'none'; }, 7000);
-      if (res.success) {
-        document.getElementById('circularTitle').value   = '';
-        document.getElementById('circularRefNo').value   = '';
-        document.getElementById('circularRemarks').value = '';
-        document.getElementById('circularFileNameDisplay').textContent = '';
-        selectedCircularFile = null;
-        loadCirculars();
-      }
-    }).catch(function() {
-      btn.disabled = false; btn.innerHTML = '📤&nbsp; Upload Circular';
-      alert('Server error. Please try again.');
-    });
-  };
-  reader.readAsDataURL(selectedCircularFile);
-}
-
-// ── Share With helpers ────────────────────────────────────────
-function buildShareWithOptions() {
-  var sel = document.getElementById('targetAudienceSelect');
-  if (!sel) return;
-  var r     = SESSION.role;
-  var state = SESSION.state || '';
-  var group = SESSION.state_group || '';
-  var opts  = '';
-
-  if (r === 'team_lead') {
-    opts = '<option value="MANAGERS:' + state + '">All Managers (' + state + ')</option>' +
-           '<option value="SPECIFIC">Specific Manager...</option>';
-  } else if (r === 'state_lead') {
-    opts = '<option value="TEAM_LEADS:' + state + '">All Team Leads (' + state + ')</option>' +
-           '<option value="SPECIFIC">Specific Team Lead...</option>';
-  } else if (r === 'project_manager') {
-    opts = '<option value="STATE_LEADS:' + group + '">All State Leads (Group ' + group + ')</option>' +
-           '<option value="TEAM_LEADS:' + group + '">All Team Leads (Group ' + group + ')</option>' +
-           '<option value="SPECIFIC">Specific person...</option>';
-  } else if (r === 'ceo') {
-    opts = '<option value="PROJECT_MANAGERS:ALL">All Project Managers</option>' +
-           '<option value="PROJECT_MANAGERS:6A">Project Manager — Group 6A</option>' +
-           '<option value="PROJECT_MANAGERS:6B">Project Manager — Group 6B</option>' +
-           '<option value="STATE_LEADS:ALL">All State Leads</option>' +
-           '<option value="SPECIFIC">Specific State Lead...</option>';
-  } else if (r === 'super_admin') {
-    opts = '<option value="ALL">Everyone (All States)</option>' +
-           '<option value="GROUP_6A">Group 6A — UP, MP, Bihar, Jharkhand, Rajasthan, CG</option>' +
-           '<option value="GROUP_6B">Group 6B — Maharashtra, Telangana, WB, Odisha, AP, Assam</option>' +
-           '<option value="UP">State: Uttar Pradesh</option>' +
-           '<option value="MP">State: Madhya Pradesh</option>' +
-           '<option value="Bihar">State: Bihar</option>' +
-           '<option value="Jharkhand">State: Jharkhand</option>' +
-           '<option value="Rajasthan">State: Rajasthan</option>' +
-           '<option value="Chhattisgarh">State: Chhattisgarh</option>' +
-           '<option value="Maharashtra">State: Maharashtra</option>' +
-           '<option value="Telangana">State: Telangana</option>' +
-           '<option value="West Bengal">State: West Bengal</option>' +
-           '<option value="Odisha">State: Odisha</option>' +
-           '<option value="Andhra Pradesh">State: Andhra Pradesh</option>' +
-           '<option value="Assam">State: Assam</option>';
-  }
-  sel.innerHTML = opts;
-  onShareWithChange();
-}
-
-function loadShareableUsers() {
-  api('getShareableUsers', SESSION.token)
-    .then(function(res) {
-      if (!res.success) return;
-      _shareableUsers = res.data;
-      var sel = document.getElementById('specificPersonSelect');
-      if (!sel) return;
-      sel.innerHTML = '<option value="">— Select person —</option>';
-      res.data.forEach(function(u) {
-        var o = document.createElement('option');
-        o.value = 'EMAIL:' + u.email;
-        o.textContent = u.name + ' (' + (u.role.replace('_', ' ')) + (u.state ? ', ' + u.state : '') + ')';
-        sel.appendChild(o);
-      });
-    });
-}
-
-function onShareWithChange() {
-  var val = document.getElementById('targetAudienceSelect').value;
-  var row = document.getElementById('specificPersonRow');
-  if (row) row.style.display = (val === 'SPECIFIC') ? 'block' : 'none';
-}
-
-// ── Custom component ──────────────────────────────────────────
-function toggleCustomComp(e) {
-  e.preventDefault();
-  var g = document.getElementById('customCompGroup');
-  g.style.display = (g.style.display === 'none' ? 'block' : 'none');
-}
-
-function saveCustomComponent() {
-  var name     = document.getElementById('customCompName').value.trim();
-  var firstSub = document.getElementById('customCompFirstSub').value.trim();
-  var desc     = document.getElementById('customCompDesc').value.trim();
-  if (!name)     { alert('Component name is required.');           return; }
-  if (!firstSub) { alert('First sub-component name is required.'); return; }
-
-  api('addComponent', SESSION.token, name, firstSub, desc)
-    .then(function(res) {
-      if (!res.success) { alert(res.message); return; }
-      var compSel = document.getElementById('componentSelect');
-      var opt = document.createElement('option');
-      opt.value = name; opt.textContent = name;
-      compSel.appendChild(opt);
-      compSel.value = name;
-      document.getElementById('customCompGroup').style.display = 'none';
-      document.getElementById('customCompName').value = '';
-      document.getElementById('customCompFirstSub').value = '';
-      document.getElementById('customCompDesc').value = '';
-      loadSubComponents();
-      alert('Component "' + name + '" saved and selected!');
-    });
-}
-
-// ── Custom sub-component ──────────────────────────────────────
-function toggleCustomSub(e) {
-  e.preventDefault();
-  var g = document.getElementById('customSubGroup');
-  g.style.display = (g.style.display === 'none' ? 'block' : 'none');
-}
-
-function saveCustomSubComponent() {
-  var comp = document.getElementById('componentSelect').value;
-  var name = document.getElementById('customSubName').value.trim();
-  var desc = document.getElementById('customSubDesc').value.trim();
-  if (!comp) { alert('Please select a component first.'); return; }
-  if (!name) { alert('Sub-component name is required.');  return; }
-
-  api('addSubComponent', SESSION.token, comp, name, desc)
-    .then(function(res) {
-      if (!res.success) { alert(res.message); return; }
-      // Add to dropdown and select it
-      var sub = document.getElementById('subComponentSelect');
-      var opt = document.createElement('option');
-      opt.value = name; opt.textContent = name; opt.dataset.desc = desc;
-      sub.appendChild(opt);
-      sub.value = name;
-      if (desc) document.getElementById('descriptionInput').value = desc;
-      // Hide custom form & clear
-      document.getElementById('customSubGroup').style.display = 'none';
-      document.getElementById('customSubName').value = '';
-      document.getElementById('customSubDesc').value = '';
-      alert('Sub-component "' + name + '" saved and selected!');
+      if (res.success) btn.outerHTML = '<span style=\"color:#2e7d32;font-weight:600\">Acknowledged</span>';
+      else { btn.disabled = false; btn.textContent = 'Mark as Read'; alert(res.message); }
     });
 }
 
@@ -1420,7 +1039,7 @@ function logout() {
   if (!confirm('Are you sure you want to logout?')) return;
   api('logoutUser', SESSION.token).then(function() {
     sessionStorage.clear();
-    SESSION = { token: null, role: null, name: null, email: null, state: null, state_group: null };
+    SESSION = { token: null, role: null, name: null };
     document.getElementById('emailInput').value = '';
     document.getElementById('otpInput').value = '';
     document.getElementById('otpSection').style.display = 'none';
