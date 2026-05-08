@@ -799,11 +799,14 @@ var HOME_ALL_DOCS       = [];
 var HOME_FILTERED_DOCS  = [];
 var HOME_PAGE           = 0;
 var HOME_PAGE_SIZE      = 20;
+var HOME_CARD_FILTER    = null;
+var HOME_STAT_CARDS     = [];
 
 function loadHome() {
   var statsEl = document.getElementById('homeStats');
   var tbodyEl = document.getElementById('homeDocsTbody');
   if (!statsEl || !tbodyEl) return;
+  HOME_CARD_FILTER = null;
   statsEl.innerHTML = '<div style="grid-column:1/-1;color:#9e9e9e;font-size:0.88rem">Loading...</div>';
   tbodyEl.innerHTML = '<tr><td colspan="6" class="no-data">Loading...</td></tr>';
 
@@ -817,22 +820,23 @@ function loadHome() {
       tbodyEl.innerHTML = '<tr><td colspan="6" class="no-data">Could not load data.</td></tr>';
       return;
     }
-    var docs       = docsRes.data  || [];
-    var components = compsRes.success ? (compsRes.data || []) : [];
-    var myDocs     = docs.filter(function(d){ return d.uploader_email === SESSION.email; });
+    var docs        = docsRes.data  || [];
+    var components  = compsRes.success ? (compsRes.data || []) : [];
+    var myDocs      = docs.filter(function(d){ return d.uploader_email === SESSION.email; });
+    var pendingDocs = docs.filter(function(d){ return d.status === 'pending'; });
 
     HOME_ALL_DOCS = docs;
 
     var cards = [
-      { label: 'Total Components', value: components.length, color: '#4527a0', bg: '#ede7f6' },
-      { label: 'Total Documents',  value: docs.length,       color: '#1a237e', bg: '#e8eaf6' },
-      { label: 'My Documents',     value: myDocs.length,     color: '#00695c', bg: '#e0f2f1' }
+      { key: 'components', label: 'Total Components', value: components.length, color: '#4527a0', bg: '#ede7f6', filter: null },
+      { key: 'all',        label: 'Total Documents',  value: docs.length,       color: '#1a237e', bg: '#e8eaf6', filter: 'all'  },
+      { key: 'mine',       label: 'My Documents',     value: myDocs.length,     color: '#00695c', bg: '#e0f2f1', filter: 'mine' }
     ];
-    statsEl.innerHTML = cards.map(function(c) {
-      return '<div style="background:' + c.bg + ';border-radius:10px;padding:20px 16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.08);cursor:default">' +
-             '<div style="font-size:2.2rem;font-weight:700;color:' + c.color + '">' + c.value + '</div>' +
-             '<div style="font-size:0.8rem;color:#555;margin-top:5px;font-weight:600">' + c.label + '</div></div>';
-    }).join('');
+    if (SESSION.role === 'team_lead' || SESSION.role === 'super_admin') {
+      cards.push({ key: 'pending', label: 'Pending Approval', value: pendingDocs.length, color: '#b71c1c', bg: '#ffebee', filter: 'pending' });
+    }
+
+    renderStatCards(cards);
 
     var yearSel = document.getElementById('homeFilterYear');
     if (yearSel && yearSel.options.length === 1) {
@@ -848,6 +852,32 @@ function loadHome() {
   });
 }
 
+function renderStatCards(cards) {
+  var statsEl = document.getElementById('homeStats');
+  HOME_STAT_CARDS = cards;
+  statsEl.innerHTML = cards.map(function(c) {
+    var isClickable = c.filter !== null;
+    var isActive    = HOME_CARD_FILTER === c.filter && isClickable;
+    var border      = isActive ? 'border:2.5px solid ' + c.color + ';' : 'border:2.5px solid transparent;';
+    var cursor      = isClickable ? 'cursor:pointer;' : 'cursor:default;';
+    var onclick     = isClickable ? 'onclick="applyCardFilter(\'' + c.filter + '\')"' : '';
+    var shadow      = isActive ? 'box-shadow:0 2px 10px rgba(0,0,0,0.18);' : 'box-shadow:0 1px 4px rgba(0,0,0,0.08);';
+    return '<div ' + onclick + ' data-card="' + c.key + '" ' +
+           'style="background:' + c.bg + ';border-radius:10px;padding:20px 16px;text-align:center;' +
+           shadow + border + cursor + 'transition:all 0.18s;user-select:none">' +
+           '<div style="font-size:2.2rem;font-weight:700;color:' + c.color + '">' + c.value + '</div>' +
+           '<div style="font-size:0.8rem;color:#555;margin-top:5px;font-weight:600">' + c.label + '</div>' +
+           (isClickable ? '<div style="font-size:0.7rem;color:' + c.color + ';margin-top:4px;opacity:0.7">' + (isActive ? '✔ Active filter' : 'Click to filter') + '</div>' : '') +
+           '</div>';
+  }).join('');
+}
+
+function applyCardFilter(filter) {
+  HOME_CARD_FILTER = (HOME_CARD_FILTER === filter) ? null : filter;
+  renderStatCards(HOME_STAT_CARDS);
+  filterHomeDocs();
+}
+
 function filterHomeDocs() {
   var year  = (document.getElementById('homeFilterYear')      || {}).value || '';
   var month = (document.getElementById('homeFilterMonth')     || {}).value || '';
@@ -855,6 +885,8 @@ function filterHomeDocs() {
   var q     = ((document.getElementById('homeFilterSearch')   || {}).value || '').toLowerCase().trim();
 
   HOME_FILTERED_DOCS = HOME_ALL_DOCS.filter(function(d) {
+    if (HOME_CARD_FILTER === 'mine'    && d.uploader_email !== SESSION.email) return false;
+    if (HOME_CARD_FILTER === 'pending' && d.status !== 'pending')             return false;
     if (year  && d.year      !== year)  return false;
     if (month && d.month     !== month) return false;
     if (comp  && d.component !== comp)  return false;
@@ -871,10 +903,12 @@ function filterHomeDocs() {
 }
 
 function clearHomeFilters() {
+  HOME_CARD_FILTER = null;
   ['homeFilterYear','homeFilterMonth','homeFilterComponent'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.value = '';
   });
   var s = document.getElementById('homeFilterSearch'); if (s) s.value = '';
+  renderStatCards(HOME_STAT_CARDS);
   filterHomeDocs();
 }
 
