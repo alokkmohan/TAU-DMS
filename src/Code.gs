@@ -13,6 +13,29 @@ function doPost(e) {
 }
 
 function doGet(e) {
+  // Public dropdowns endpoint — no auth needed (just category names)
+  if (e && e.parameter && e.parameter.action === 'dropdowns') {
+    try {
+      const rows    = getSheetData(CONFIG.TABS.DROPDOWNS);
+      const compMap = {};
+      rows.forEach(function(r) {
+        const comp = (r.component     || '').trim();
+        const sub  = (r.sub_component || '').trim();
+        const desc = (r.description   || '').trim();
+        if (!comp || !sub) return;
+        if (!compMap[comp]) compMap[comp] = [];
+        compMap[comp].push({ sub: sub, desc: desc });
+      });
+      const components = Object.keys(compMap).sort().map(function(c) {
+        return { component: c, sub_components: compMap[c] };
+      });
+      return ContentService
+        .createTextOutput(JSON.stringify({ version: 1, components: components }))
+        .setMimeType(ContentService.MimeType.JSON);
+    } catch(err) {
+      return _json({ version: 1, components: [] });
+    }
+  }
   return _json({ status: 'ok', app: 'DMS — TAU', version: '2.1' });
 }
 
