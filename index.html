@@ -6,6 +6,7 @@
   <link rel="apple-touch-icon" href="https://www.educategirls.ngo/wp-content/themes/egindia/static/images/eg-logo.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document Management System</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; color: #212121; }
@@ -101,6 +102,7 @@
       border-left: 3px solid #818cf8; font-weight: 600;
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
     }
+    .nav-icon { width: 16px; text-align: center; font-size: 0.88rem; opacity: 0.85; flex-shrink: 0; }
 
     /* ═══════════════════════════════════════════
        MAIN LAYOUT
@@ -866,15 +868,22 @@ document.addEventListener('keydown', function(e) {
 // ════════════════════════════════════════════════
 function buildSidebar() {
   var items = [
-    { id: 'home',     icon: '🏠', label: 'Home' },
-    { id: 'upload',   icon: '📤', label: 'Upload Document' },
-    { id: 'mydocs',   icon: '📁', label: 'My Documents' }
+    { id: 'home',     icon: 'fa-house',          label: 'Home' },
+    { id: 'upload',   icon: 'fa-cloud-arrow-up',  label: 'Upload Document' },
+    { id: 'mydocs',   icon: 'fa-folder-open',     label: 'My Documents' }
   ];
-  items.push({ id: 'circulars', icon: '📢', label: 'Circulars' });
+  if (SESSION.role === 'team_lead' || SESSION.role === 'super_admin') {
+    items.push({ id: 'verify',    icon: 'fa-circle-check',   label: 'Verify Documents' });
+  }
+  if (SESSION.role === 'super_admin') {
+    items.push({ id: 'alldocs',   icon: 'fa-table-list',     label: 'All Documents' });
+    items.push({ id: 'admin',     icon: 'fa-sliders',        label: 'Admin Panel' });
+  }
+  items.push({ id: 'circulars',   icon: 'fa-bullhorn',       label: 'Circulars' });
 
   document.getElementById('sidebar').innerHTML = items.map(function(item) {
     return '<div class=\"nav-item\" id=\"nav-' + item.id + '\" onclick=\"showSection(' + "'" + item.id + "'" + ')\">' +
-           '<span>' + item.icon + '</span> ' + item.label + '</div>';
+           '<i class=\"fa-solid ' + item.icon + ' nav-icon\"></i> ' + item.label + '</div>';
   }).join('');
 }
 
@@ -919,7 +928,12 @@ function loadHome() {
       return;
     }
     var docs       = docsRes.data  || [];
-    var components = compsRes.success ? (compsRes.data || []) : [];
+    // Count unique components from actual documents (more reliable than Dropdowns sheet)
+    var uniqueComps = [];
+    docs.forEach(function(d){ if (d.component && uniqueComps.indexOf(d.component) === -1) uniqueComps.push(d.component); });
+    var compsFromDropdowns = compsRes.success ? (compsRes.data || []) : [];
+    // Use whichever count is higher — Dropdowns or actual docs
+    var components = compsFromDropdowns.length >= uniqueComps.length ? compsFromDropdowns : uniqueComps;
     var myDocs     = docs.filter(function(d){ return d.uploader_email === SESSION.email; });
     var pendingDocs = docs.filter(function(d){ return d.status === 'pending'; });
 
