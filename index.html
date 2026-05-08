@@ -304,6 +304,18 @@
   <div class="layout">
     <div class="main">
 
+      <!-- ── HOME ── -->
+      <div class="section" id="sec-home">
+        <div id="homeStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:20px;"></div>
+        <div class="card">
+          <div class="card-title">📋 Recent Documents</div>
+          <div class="table-wrap"><table id="homeDocsTable">
+            <thead><tr><th>Subject</th><th>Component</th><th>Uploaded By</th><th>Date</th><th>Status</th></tr></thead>
+            <tbody id="homeDocsTbody"><tr><td colspan="5" class="no-data">Loading...</td></tr></tbody>
+          </table></div>
+        </div>
+      </div>
+
       <!-- ── UPLOAD ── -->
       <div class="section" id="sec-upload">
         <div class="card">
@@ -643,13 +655,16 @@ function showDashboard() {
   document.getElementById('loginPage').style.display    = 'none';
   document.getElementById('dashboardPage').style.display = 'block';
   document.getElementById('userNameDisplay').textContent = SESSION.name;
-  document.getElementById('roleDisplay').textContent =
-    SESSION.role === 'super_admin' ? 'Super Admin' :
-    SESSION.role === 'team_lead'   ? 'Team Lead'   : 'Manager';
+  var roleLabels = {
+    super_admin: 'Super Admin', team_lead: 'Team Lead',
+    state_lead: 'State Lead', project_manager: 'Project Manager',
+    ceo: 'CEO', manager: 'Manager'
+  };
+  document.getElementById('roleDisplay').textContent = roleLabels[SESSION.role] || SESSION.role;
   buildSidebar();
   loadComponents();
   populateYearFilters();
-  showSection('upload');
+  showSection('home');
 }
 
 // ════════════════════════════════════════════════
@@ -732,13 +747,15 @@ document.addEventListener('keydown', function(e) {
 // ════════════════════════════════════════════════
 function buildSidebar() {
   var items = [
-    { id: 'upload',   icon: '\u{1F4E4}', label: 'Upload Document' },
-    { id: 'mydocs',   icon: '\u{1F4C1}', label: 'My Documents' }
+    { id: 'home',     icon: '🏠', label: 'Home' },
+    { id: 'upload',   icon: '📤', label: 'Upload Document' },
+    { id: 'mydocs',   icon: '📁', label: 'My Documents' }
   ];
-  if (SESSION.role === 'team_lead' || SESSION.role === 'super_admin') {
-    items.push({ id: 'alldocs', icon: '\u{1F4CB}', label: 'All Documents' });
+  if (SESSION.role === 'team_lead' || SESSION.role === 'super_admin' ||
+      SESSION.role === 'state_lead' || SESSION.role === 'project_manager' || SESSION.role === 'ceo') {
+    items.push({ id: 'alldocs', icon: '📋', label: 'All Documents' });
   }
-  items.push({ id: 'circulars', icon: '\u{1F4E2}', label: 'Circulars' });
+  items.push({ id: 'circulars', icon: '📢', label: 'Circulars' });
 
   document.getElementById('sidebar').innerHTML = items.map(function(item) {
     return '<div class=\"nav-item\" id=\"nav-' + item.id + '\" onclick=\"showSection(' + "'" + item.id + "'" + ')\">' +
@@ -753,9 +770,65 @@ function showSection(id) {
   var nav = document.getElementById('nav-' + id);
   if (sec) sec.classList.add('active');
   if (nav) nav.classList.add('active');
+  if (id === 'home')      loadHome();
   if (id === 'mydocs')    loadDocs();
   if (id === 'alldocs')   loadAllDocs();
   if (id === 'circulars') loadCirculars();
+}
+
+// ════════════════════════════════════════════════
+//  HOME DASHBOARD
+// ════════════════════════════════════════════════
+function loadHome() {
+  var statsEl = document.getElementById('homeStats');
+  var tbodyEl = document.getElementById('homeDocsTbody');
+  if (!statsEl || !tbodyEl) return;
+  statsEl.innerHTML = '<div style="grid-column:1/-1;color:#9e9e9e;font-size:0.88rem">Loading...</div>';
+  tbodyEl.innerHTML = '<tr><td colspan="5" class="no-data">Loading...</td></tr>';
+
+  api('getDocuments', SESSION.token, {})
+    .then(function(res) {
+      if (!res.success) { tbodyEl.innerHTML = '<tr><td colspan="5" class="no-data">Could not load data.</td></tr>'; return; }
+      var docs = res.data || [];
+      var total    = docs.length;
+      var pending  = docs.filter(function(d){ return d.status === 'pending'; }).length;
+      var verified = docs.filter(function(d){ return d.status === 'tl_verified'; }).length;
+      var approved = docs.filter(function(d){ return d.status === 'admin_approved'; }).length;
+      var rejected = docs.filter(function(d){ return d.status === 'tl_rejected' || d.status === 'admin_rejected'; }).length;
+
+      var cards = [
+        { label: 'Total Documents', value: total,    color: '#1a237e', bg: '#e8eaf6' },
+        { label: 'Pending',         value: pending,  color: '#e65100', bg: '#fff3e0' },
+        { label: 'Verified (TL)',   value: verified, color: '#2e7d32', bg: '#e8f5e9' },
+        { label: 'Approved',        value: approved, color: '#1565c0', bg: '#e3f2fd' },
+        { label: 'Rejected',        value: rejected, color: '#c62828', bg: '#ffebee' }
+      ];
+      statsEl.innerHTML = cards.map(function(c) {
+        return '<div style="background:' + c.bg + ';border-radius:10px;padding:18px 16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.08)">' +
+               '<div style="font-size:2rem;font-weight:700;color:' + c.color + '">' + c.value + '</div>' +
+               '<div style="font-size:0.78rem;color:#555;margin-top:4px;font-weight:600">' + c.label + '</div></div>';
+      }).join('');
+
+      var recent = docs.slice(0, 20);
+      if (!recent.length) {
+        tbodyEl.innerHTML = '<tr><td colspan="5" class="no-data">No documents found.</td></tr>';
+        return;
+      }
+      var statusLabel = { pending:'Pending', tl_verified:'TL Verified', tl_rejected:'TL Rejected',
+                          admin_approved:'Approved', admin_rejected:'Rejected', archived:'Archived' };
+      var statusClass = { pending:'badge-pending', tl_verified:'badge-verified', tl_rejected:'badge-rejected',
+                          admin_approved:'badge-approved', admin_rejected:'badge-rejected', archived:'badge-archived' };
+      tbodyEl.innerHTML = recent.map(function(d) {
+        return '<tr><td>' + (d.subject||'-') + '</td>' +
+               '<td>' + (d.component||'-') + ' › ' + (d.sub_component||'-') + '</td>' +
+               '<td>' + (d.uploader_name||'-') + '</td>' +
+               '<td>' + (d.month||'') + ' ' + (d.year||'') + '</td>' +
+               '<td><span class="badge ' + (statusClass[d.status]||'') + '">' + (statusLabel[d.status]||d.status) + '</span></td></tr>';
+      }).join('');
+    })
+    .catch(function() {
+      tbodyEl.innerHTML = '<tr><td colspan="5" class="no-data">Error loading data.</td></tr>';
+    });
 }
 
 // ════════════════════════════════════════════════
