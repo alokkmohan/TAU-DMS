@@ -468,7 +468,7 @@
                  ondrop="handleDrop(event)">
               <div class="file-drop-icon">📎</div>
               <p>Click to browse or drag &amp; drop file here</p>
-              <small>PDF, Word, Excel, CSV, PowerPoint, Image (JPG/PNG) &nbsp;|&nbsp; Max 10 MB</small>
+              <small>📄 PDF &nbsp;·&nbsp; 📝 Word (.doc/.docx) &nbsp;·&nbsp; 📊 Excel (.xls/.xlsx) &nbsp;·&nbsp; 📋 CSV &nbsp;·&nbsp; 📑 PPT (.ppt/.pptx) &nbsp;·&nbsp; 🖼️ Image (JPG/PNG) &nbsp;|&nbsp; Max 10 MB</small>
               <div class="file-name" id="fileNameDisplay"></div>
             </div>
             <input type="file" id="fileInput" style="display:none"
@@ -665,6 +665,23 @@
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
       <button class="btn btn-outline" onclick="closeEditModal()">Cancel</button>
       <button class="btn btn-primary" onclick="confirmEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ UPLOAD SUCCESS MODAL ══════════ -->
+<div class="modal-overlay" id="uploadSuccessModal">
+  <div class="modal" style="text-align:center;max-width:420px">
+    <div style="font-size:3rem;margin-bottom:10px">✅</div>
+    <div style="font-size:1.2rem;font-weight:700;color:#166534;margin-bottom:8px">Document Upload Ho Gaya!</div>
+    <div id="uploadSuccessFileName" style="font-size:0.88rem;color:#555;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px 12px;margin-bottom:20px;word-break:break-all"></div>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-outline" style="min-width:160px" onclick="uploadSuccessGoHome()">
+        <i class="fa-solid fa-house"></i>&nbsp; Home Dashboard
+      </button>
+      <button class="btn btn-primary" style="min-width:160px" onclick="uploadSuccessAnother()">
+        <i class="fa-solid fa-cloud-arrow-up"></i>&nbsp; Ek aur Upload karo
+      </button>
     </div>
   </div>
 </div>
@@ -1386,8 +1403,8 @@ function submitUpload() {
       btn.disabled = false; btn.innerHTML = 'Upload Document';
       if (!res.success) { showUploadAlert(res.message, 'error'); return; }
       bustDocsCache();
-      showUploadAlert(res.data.message + ' | File: ' + res.data.fileName, 'success');
       resetUploadForm();
+      showUploadSuccess(res.data.fileName || 'Document', res.data.message);
     })
     .catch(function() {
       btn.disabled = false; btn.innerHTML = 'Upload Document';
@@ -1401,6 +1418,23 @@ function showUploadAlert(msg, type) {
   var el = document.getElementById('uploadAlert');
   el.textContent = msg; el.className = 'alert alert-' + type; el.style.display = 'block';
   setTimeout(function() { el.style.display = 'none'; }, 7000);
+}
+
+// ── Upload success modal ──────────────────────────────────────
+function showUploadSuccess(fileName, extraMsg) {
+  var info = fileName || 'Document';
+  if (extraMsg && extraMsg !== fileName) info += '\n' + extraMsg;
+  document.getElementById('uploadSuccessFileName').textContent = info;
+  document.getElementById('uploadSuccessModal').classList.add('open');
+}
+function uploadSuccessGoHome() {
+  document.getElementById('uploadSuccessModal').classList.remove('open');
+  showSection('home');
+}
+function uploadSuccessAnother() {
+  document.getElementById('uploadSuccessModal').classList.remove('open');
+  refreshUploadDropdowns();
+  document.getElementById('subjectInput').focus();
 }
 
 function resetUploadForm() {
