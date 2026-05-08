@@ -56,6 +56,11 @@ function addComponent(token, component, subComponent, description) {
       template_link: ''
     });
 
+    // Also update dropdowns.json in Git (non-fatal if GitHub PAT not set)
+    try { addComponentToGit(component, subComponent, description); } catch(e) {
+      console.warn('GitHub update skipped: ' + e.message);
+    }
+
     writeAuditLog(session.email, session.name, 'ADD_COMPONENT', '', component);
     return successResponse({ message: 'Component "' + component + '" added with sub-component "' + subComponent + '".' });
 
@@ -85,6 +90,11 @@ function addSubComponent(token, component, subComponent, description) {
       description:   description || '',
       template_link: ''
     });
+
+    // Also update dropdowns.json in Git
+    try { addSubComponentToGit(component, subComponent, description); } catch(e) {
+      console.warn('GitHub update skipped: ' + e.message);
+    }
 
     writeAuditLog(session.email, session.name, 'ADD_SUB_COMPONENT', '', subComponent);
     return successResponse({ message: 'Sub-component "' + subComponent + '" added to ' + component + '.' });

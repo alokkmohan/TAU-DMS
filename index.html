@@ -711,9 +711,11 @@ function api(action) {
 // ════════════════════════════════════════════════
 var SESSION = { token: null, role: null, name: null, email: null };
 
-// ── localStorage cache for dropdowns (24h TTL — rarely changes) ──
-var DD_LS_KEY = 'dms_dd_v1';
-var DD_LS_TTL = 86400000; // 24 hours
+// ── Dropdowns: served from /dropdowns.json (Git) ─────────────
+// localStorage cache — 1h TTL (re-fetches if Git file was updated)
+var DD_LS_KEY = 'dms_dd_v2';
+var DD_LS_TTL = 3600000; // 1 hour
+var DD_JSON_URL = '/dropdowns.json';
 
 function getLocalDropdowns() {
   try {
@@ -733,6 +735,23 @@ function setLocalDropdowns(components, allComponents, subComponents) {
   } catch(e) {}
 }
 function clearLocalDropdowns() { try { localStorage.removeItem(DD_LS_KEY); } catch(e) {} }
+
+// ── Fetch dropdowns.json from GitHub Pages (no GAS needed) ────
+function fetchDropdownsFromGit() {
+  return fetch(DD_JSON_URL + '?v=' + Date.now())
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var components   = [];
+      var subComponents = [];
+      (data.components || []).forEach(function(c) {
+        components.push(c.component);
+        (c.sub_components || []).forEach(function(s) {
+          subComponents.push({ component: c.component, sub: s.sub, desc: s.desc || '' });
+        });
+      });
+      return { components: components, allComponents: components, subComponents: subComponents };
+    });
+}
 
 // ── In-memory data cache (avoids repeat API calls within session) ──
 var CACHE = { docs: null, docsAt: 0, TTL: 90000 }; // 90 sec TTL
@@ -811,11 +830,10 @@ function showDashboard() {
     });
   }
 
-  // ── Fast path: dropdowns from localStorage (24h cache) ───────
+  // ── Fast path: dropdowns from localStorage (1h cache) ────────
   var cachedDD = getLocalDropdowns();
   if (cachedDD) {
     applyDropdownData(cachedDD.components, cachedDD.allComponents, cachedDD.subComponents, []);
-    // Only fetch documents (no dropdown data needed)
     cachedGetDocuments().then(function(res) {
       if (res.success && res.data) { CACHE.docs = res.data; CACHE.docsAt = Date.now(); }
       populateYearFilters();
@@ -824,17 +842,35 @@ function showDashboard() {
     return;
   }
 
-  // ── Slow path: full init call (first visit or cache expired) ─
-  api('getDashboardInit', SESSION.token).then(function(res) {
-    if (!res.success) { showSection('home'); return; }
-    var d = res.data;
-    applyDropdownData(d.components, d.allComponents, d.subComponents, d.documents);
-    // Save dropdowns to localStorage for next 24h
-    setLocalDropdowns(d.components || [], d.allComponents || [], d.subComponents || []);
-    // Seed document cache
-    if (d.documents) { CACHE.docs = d.documents; CACHE.docsAt = Date.now(); }
-    populateYearFilters();
-    showSection('home');
+  // ── Medium path: fetch dropdowns.json from Git (no GAS) ──────
+  // Then fetch documents separately from GAS
+  Promise.all([
+    fetchDropdownsFromGit().catch(function() { return null; }),
+    cachedGetDocuments()
+  ]).then(function(results) {
+    var dd  = results[0];
+    var res = results[1];
+
+    if (dd && dd.components.length > 0) {
+      // dropdowns.json has data → use it
+      applyDropdownData(dd.components, dd.allComponents, dd.subComponents,
+                        res.success ? res.data : []);
+      setLocalDropdowns(dd.components, dd.allComponents, dd.subComponents);
+      if (res.success && res.data) { CACHE.docs = res.data; CACHE.docsAt = Date.now(); }
+      populateYearFilters();
+      showSection('home');
+    } else {
+      // ── Fallback: dropdowns.json empty → use getDashboardInit ─
+      api('getDashboardInit', SESSION.token).then(function(r) {
+        if (!r.success) { showSection('home'); return; }
+        var d = r.data;
+        applyDropdownData(d.components, d.allComponents, d.subComponents, d.documents);
+        setLocalDropdowns(d.components || [], d.allComponents || [], d.subComponents || []);
+        if (d.documents) { CACHE.docs = d.documents; CACHE.docsAt = Date.now(); }
+        populateYearFilters();
+        showSection('home');
+      }).catch(function() { showSection('home'); });
+    }
   }).catch(function() { showSection('home'); });
 }
 
