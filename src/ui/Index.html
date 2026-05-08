@@ -975,9 +975,37 @@ function showSection(id) {
   if (sec) sec.classList.add('active');
   if (nav) nav.classList.add('active');
   if (id === 'home')      loadHome();
+  if (id === 'upload')    refreshUploadDropdowns();
   if (id === 'mydocs')    loadDocs();
   if (id === 'alldocs')   loadAllDocs();
   if (id === 'circulars') loadCirculars();
+}
+
+function refreshUploadDropdowns() {
+  var sel = document.getElementById('componentSelect');
+  if (!sel) return;
+  var comps = Object.keys(SUBCACHE).sort();
+  if (comps.length === 0 && HOME_ALL_DOCS.length > 0) {
+    HOME_ALL_DOCS.forEach(function(d) {
+      if (d.component && comps.indexOf(d.component) === -1) comps.push(d.component);
+    });
+    comps.sort();
+  }
+  if (comps.length === 0) {
+    api('getComponents', SESSION.token).then(function(res) {
+      if (!res.success || !res.data.length) return;
+      res.data.forEach(function(c) {
+        var exists = Array.from(sel.options).some(function(o){ return o.value === c; });
+        if (!exists) { var o = document.createElement('option'); o.value = o.textContent = c; sel.appendChild(o); }
+        if (!SUBCACHE[c]) SUBCACHE[c] = [];
+      });
+    });
+    return;
+  }
+  while (sel.options.length > 1) sel.remove(1);
+  comps.forEach(function(c) {
+    var o = document.createElement('option'); o.value = o.textContent = c; sel.appendChild(o);
+  });
 }
 
 // ════════════════════════════════════════════════
