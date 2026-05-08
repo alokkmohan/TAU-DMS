@@ -798,10 +798,12 @@ function showDashboard() {
   document.getElementById('roleDisplay').textContent = roleLabels[SESSION.role] || SESSION.role;
   buildSidebar();
 
-  // ── Helper: wire dropdowns from component data ───────────────
+  // ── Home IMMEDIATELY dikhao — blank screen nahi ───────────────
+  showSection('home');   // loadHome() shuru hoga, "Loading..." dikhega
+
+  // ── Helper: wire dropdowns from component data ────────────────
   function applyDropdownData(components, allComponents, subComponents, docs) {
     var compList = components || [];
-    // Fallback: derive from docs if list still empty
     if (compList.length === 0 && docs && docs.length > 0) {
       docs.forEach(function(doc) {
         if (doc.component && compList.indexOf(doc.component) === -1) compList.push(doc.component);
@@ -810,7 +812,6 @@ function showDashboard() {
     }
     ['componentSelect', 'filterComponent', 'allFilterComponent', 'homeFilterComponent'].forEach(function(id) {
       var sel = document.getElementById(id); if (!sel) return;
-      // Clear old options (keep first "All/placeholder")
       while (sel.options.length > 1) sel.remove(1);
       compList.forEach(function(c) {
         var o = document.createElement('option'); o.value = o.textContent = c; sel.appendChild(o);
@@ -830,48 +831,31 @@ function showDashboard() {
     });
   }
 
-  // ── Fast path: dropdowns from localStorage (1h cache) ────────
+  // ── Dropdowns background mein load karo (home block nahi hoga) ─
   var cachedDD = getLocalDropdowns();
   if (cachedDD) {
+    // localStorage se instant — koi API call nahi
     applyDropdownData(cachedDD.components, cachedDD.allComponents, cachedDD.subComponents, []);
-    cachedGetDocuments().then(function(res) {
-      if (res.success && res.data) { CACHE.docs = res.data; CACHE.docsAt = Date.now(); }
-      populateYearFilters();
-      showSection('home');
-    }).catch(function() { showSection('home'); });
     return;
   }
 
-  // ── Medium path: fetch dropdowns.json from Git (no GAS) ──────
-  // Then fetch documents separately from GAS
-  Promise.all([
-    fetchDropdownsFromGit().catch(function() { return null; }),
-    cachedGetDocuments()
-  ]).then(function(results) {
-    var dd  = results[0];
-    var res = results[1];
-
+  // dropdowns.json se fetch (GitHub Pages, fast, no GAS)
+  fetchDropdownsFromGit().catch(function() { return null; }).then(function(dd) {
     if (dd && dd.components.length > 0) {
-      // dropdowns.json has data → use it
-      applyDropdownData(dd.components, dd.allComponents, dd.subComponents,
-                        res.success ? res.data : []);
+      applyDropdownData(dd.components, dd.allComponents, dd.subComponents, []);
       setLocalDropdowns(dd.components, dd.allComponents, dd.subComponents);
-      if (res.success && res.data) { CACHE.docs = res.data; CACHE.docsAt = Date.now(); }
-      populateYearFilters();
-      showSection('home');
     } else {
-      // ── Fallback: dropdowns.json empty → use getDashboardInit ─
+      // Fallback: getDashboardInit se dropdowns lo (GAS), docs ignore karo
       api('getDashboardInit', SESSION.token).then(function(r) {
-        if (!r.success) { showSection('home'); return; }
+        if (!r.success) return;
         var d = r.data;
-        applyDropdownData(d.components, d.allComponents, d.subComponents, d.documents);
+        applyDropdownData(d.components, d.allComponents, d.subComponents, d.documents || []);
         setLocalDropdowns(d.components || [], d.allComponents || [], d.subComponents || []);
-        if (d.documents) { CACHE.docs = d.documents; CACHE.docsAt = Date.now(); }
-        populateYearFilters();
-        showSection('home');
-      }).catch(function() { showSection('home'); });
+        // docs cache bhi seed kar do agar milega
+        if (d.documents && !CACHE.docs) { CACHE.docs = d.documents; CACHE.docsAt = Date.now(); }
+      });
     }
-  }).catch(function() { showSection('home'); });
+  });
 }
 
 var SUBCACHE = {}; // component → [{sub, desc}] for instant dropdown cascade

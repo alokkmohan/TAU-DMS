@@ -790,105 +790,66 @@ function showDashboard() {
   };
   document.getElementById('roleDisplay').textContent = roleLabels[SESSION.role] || SESSION.role;
   buildSidebar();
-  api('getDashboardInit', SESSION.token).then(function(res) {
-    if (!res.success) { showSection('home'); return; }
-    var d = res.data;
-    // Populate component dropdowns — use Dropdowns sheet, fallback to doc components
-    var compList = d.components || [];
-    if (compList.length === 0 && d.documents && d.documents.length > 0) {
-      var fromDocs = [];
-      d.documents.forEach(function(doc) {
-        if (doc.component && fromDocs.indexOf(doc.component) === -1) fromDocs.push(doc.component);
+
+  // ── Home IMMEDIATELY dikhao — blank screen nahi ───────────────
+  showSection('home');   // loadHome() shuru hoga, "Loading..." dikhega
+
+  // ── Helper: wire dropdowns from component data ────────────────
+  function applyDropdownData(components, allComponents, subComponents, docs) {
+    var compList = components || [];
+    if (compList.length === 0 && docs && docs.length > 0) {
+      docs.forEach(function(doc) {
+        if (doc.component && compList.indexOf(doc.component) === -1) compList.push(doc.component);
       });
-      compList = fromDocs.sort();
+      compList.sort();
     }
     ['componentSelect', 'filterComponent', 'allFilterComponent', 'homeFilterComponent'].forEach(function(id) {
       var sel = document.getElementById(id); if (!sel) return;
+      while (sel.options.length > 1) sel.remove(1);
       compList.forEach(function(c) {
         var o = document.createElement('option'); o.value = o.textContent = c; sel.appendChild(o);
       });
     });
     var tsel = document.getElementById('targetComponentSelect');
-    if (tsel) (d.allComponents || []).forEach(function(c) {
-      var o = document.createElement('option'); o.value = o.textContent = c; tsel.appendChild(o);
+    if (tsel) {
+      while (tsel.options.length > 1) tsel.remove(1);
+      (allComponents || compList).forEach(function(c) {
+        var o = document.createElement('option'); o.value = o.textContent = c; tsel.appendChild(o);
+      });
+    }
+    SUBCACHE = {};
+    (subComponents || []).forEach(function(r) {
+      if (!SUBCACHE[r.component]) SUBCACHE[r.component] = [];
+      SUBCACHE[r.component].push({ sub: r.sub, desc: r.desc });
     });
-   buildSidebar();
+  }
 
-   // -- Helper: wire dropdowns from component data --
-   function applyDropdownData(components, allComponents, subComponents, docs) {
-     var compList = components || [];
-     if (compList.length === 0 && docs && docs.length > 0) {
-       docs.forEach(function(doc) {
-         if (doc.component && compList.indexOf(doc.component) === -1) compList.push(doc.component);
-       });
-       compList.sort();
-     }
-     ['componentSelect', 'filterComponent', 'allFilterComponent', 'homeFilterComponent'].forEach(function(id) {
-       var sel = document.getElementById(id); if (!sel) return;
-       while (sel.options.length > 1) sel.remove(1);
-       compList.forEach(function(c) {
-         var o = document.createElement('option'); o.value = o.textContent = c; sel.appendChild(o);
-       });
-     });
-     var tsel = document.getElementById('targetComponentSelect');
-     if (tsel) {
-       while (tsel.options.length > 1) tsel.remove(1);
-       (allComponents || compList).forEach(function(c) {
-         var o = document.createElement('option'); o.value = o.textContent = c; tsel.appendChild(o);
-       });
-     }
-     SUBCACHE = {};
-     (subComponents || []).forEach(function(r) {
-       if (!SUBCACHE[r.component]) SUBCACHE[r.component] = [];
-       SUBCACHE[r.component].push({ sub: r.sub, desc: r.desc });
-     });
-   }
-
-  // -- Fast path: localStorage (1h cache) --
+  // ── Dropdowns background mein load karo (home block nahi hoga) ─
   var cachedDD = getLocalDropdowns();
   if (cachedDD) {
+    // localStorage se instant — koi API call nahi
     applyDropdownData(cachedDD.components, cachedDD.allComponents, cachedDD.subComponents, []);
-    cachedGetDocuments().then(function(res) {
-      if (res.success && res.data) { CACHE.docs = res.data; CACHE.docsAt = Date.now(); }
-      populateYearFilters(); showSection('home');
-    }).catch(function() { showSection('home'); });
     return;
   }
-  // -- Medium path: fetch /dropdowns.json from Git (no GAS) --
-  Promise.all([
-    fetchDropdownsFromGit().catch(function() { return null; }),
-    cachedGetDocuments()
-  ]).then(function(results) {
-    var dd = results[0]; var res = results[1];
-    if (dd && dd.components.length > 0) {
-      applyDropdownData(dd.components, dd.allComponents, dd.subComponents, res.success ? res.data : []);
-      setLocalDropdowns(dd.components, dd.allComponents, dd.subComponents);
-      if (res.success && res.data) { CACHE.docs = res.data; CACHE.docsAt = Date.now(); }
-      populateYearFilters(); showSection('home');
-    } else {
-      api('getDashboardInit', SESSION.token).then(function(r) {
-        if (!r.success) { showSection('home'); return; }
-        var d = r.data;
-        applyDropdownData(d.components, d.allComponents, d.subComponents, d.documents);
-        setLocalDropdowns(d.components || [], d.allComponents || [], d.subComponents || []);
-        if (d.documents) { CACHE.docs = d.documents; CACHE.docsAt = Date.now(); }
-        populateYearFilters(); showSection('home');
-      }).catch(function() { showSection('home'); });
-    }
-  }).catch(function() { showSection('home'); });
- }
 
-   // -- Slow path: full init call (first visit or cache expired) --
-   api('getDashboardInit', SESSION.token).then(function(res) {
-     if (!res.success) { showSection('home'); return; }
-     var d = res.data;
-     applyDropdownData(d.components, d.allComponents, d.subComponents, d.documents);
-     setLocalDropdowns(d.components || [], d.allComponents || [], d.subComponents || []);
-     if (d.documents) { CACHE.docs = d.documents; CACHE.docsAt = Date.now(); }
-     populateYearFilters();
-     showSection('home');
-   }).catch(function() { showSection('home'); });
- }
+  // dropdowns.json se fetch (GitHub Pages, fast, no GAS)
+  fetchDropdownsFromGit().catch(function() { return null; }).then(function(dd) {
+    if (dd && dd.components.length > 0) {
+      applyDropdownData(dd.components, dd.allComponents, dd.subComponents, []);
+      setLocalDropdowns(dd.components, dd.allComponents, dd.subComponents);
+    } else {
+      // Fallback: getDashboardInit se dropdowns lo (GAS), docs ignore karo
+      api('getDashboardInit', SESSION.token).then(function(r) {
+        if (!r.success) return;
+        var d = r.data;
+        applyDropdownData(d.components, d.allComponents, d.subComponents, d.documents || []);
+        setLocalDropdowns(d.components || [], d.allComponents || [], d.subComponents || []);
+        // docs cache bhi seed kar do agar milega
+        if (d.documents && !CACHE.docs) { CACHE.docs = d.documents; CACHE.docsAt = Date.now(); }
+      });
+    }
+  });
+}
   }
   setLoginLoading('sendOtpBtn', true, 'Send OTP');
   document.getElementById('loginMsg').style.display = 'none';
