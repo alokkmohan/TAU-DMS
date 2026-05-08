@@ -887,9 +887,9 @@ function filterHomeDocs() {
   HOME_FILTERED_DOCS = HOME_ALL_DOCS.filter(function(d) {
     if (HOME_CARD_FILTER === 'mine'    && d.uploader_email !== SESSION.email) return false;
     if (HOME_CARD_FILTER === 'pending' && d.status !== 'pending')             return false;
-    if (year  && d.year      !== year)  return false;
-    if (month && d.month     !== month) return false;
-    if (comp  && d.component !== comp)  return false;
+    if (year  && String(d.year)      !== String(year))  return false;
+    if (month && String(d.month)     !== String(month)) return false;
+    if (comp  && String(d.component) !== String(comp))  return false;
     if (q && !(
       (d.subject       || '').toLowerCase().includes(q) ||
       (d.uploader_name || '').toLowerCase().includes(q) ||
