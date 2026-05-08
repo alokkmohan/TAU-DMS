@@ -713,7 +713,7 @@ var SESSION = { token: null, role: null, name: null, email: null };
 // -- Dropdowns: served from /dropdowns.json (Git) --
 var DD_LS_KEY = 'dms_dd_v2';
 var DD_LS_TTL = 3600000; // 1 hour
-var DD_JSON_URL = GAS_URL + '?action=dropdowns';
+var DD_JSON_URL = '/dropdowns.json';
 function getLocalDropdowns() {
   try {
     var raw = localStorage.getItem(DD_LS_KEY);
@@ -733,7 +733,7 @@ function setLocalDropdowns(components, allComponents, subComponents) {
 }
 function clearLocalDropdowns() { try { localStorage.removeItem(DD_LS_KEY); } catch(e) {} }
 function fetchDropdownsFromGit() {
-  return fetch(DD_JSON_URL + '&v=' + Date.now())
+  return fetch(DD_JSON_URL + '?v=' + Date.now())
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var components = []; var subComponents = [];
@@ -1558,6 +1558,7 @@ initApp();
 </script>
 </body>
 </html>
+
 
 
 

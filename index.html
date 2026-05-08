@@ -715,7 +715,7 @@ var SESSION = { token: null, role: null, name: null, email: null };
 // localStorage cache — 1h TTL (re-fetches if Git file was updated)
 var DD_LS_KEY = 'dms_dd_v2';
 var DD_LS_TTL = 3600000; // 1 hour
-var DD_JSON_URL = GAS_URL + '?action=dropdowns';
+var DD_JSON_URL = '/dropdowns.json';
 
 function getLocalDropdowns() {
   try {
@@ -738,7 +738,7 @@ function clearLocalDropdowns() { try { localStorage.removeItem(DD_LS_KEY); } cat
 
 // ── Fetch dropdowns.json from GitHub Pages (no GAS needed) ────
 function fetchDropdownsFromGit() {
-  return fetch(DD_JSON_URL + '&v=' + Date.now())
+  return fetch(DD_JSON_URL + '?v=' + Date.now())
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var components   = [];

@@ -1,5 +1,54 @@
 {
   "version": 1,
   "updated_at": "2026-05-09",
-  "components": []
+  "components": [
+    {
+      "component": "Academics",
+      "sub_components": [
+        { "sub": "Curriculum Planning", "desc": "" },
+        { "sub": "Exam & Assessment", "desc": "" },
+        { "sub": "Teacher Training", "desc": "" },
+        { "sub": "Student Enrollment", "desc": "" },
+        { "sub": "Learning Outcomes", "desc": "" },
+        { "sub": "Patrachar", "desc": "" }
+      ]
+    },
+    {
+      "component": "Civil",
+      "sub_components": [
+        { "sub": "Construction", "desc": "" },
+        { "sub": "Maintenance", "desc": "" },
+        { "sub": "Inspection Report", "desc": "" },
+        { "sub": "Procurement", "desc": "" }
+      ]
+    },
+    {
+      "component": "Govt Support",
+      "sub_components": [
+        { "sub": "Circulars & Orders", "desc": "" },
+        { "sub": "RTI", "desc": "" },
+        { "sub": "Grants & Funds", "desc": "" },
+        { "sub": "Compliance", "desc": "" }
+      ]
+    },
+    {
+      "component": "IT",
+      "sub_components": [
+        { "sub": "ICT Lab Setup", "desc": "" },
+        { "sub": "Software & Systems", "desc": "" },
+        { "sub": "Smart Class", "desc": "" },
+        { "sub": "Data Management", "desc": "" },
+        { "sub": "Technical Support", "desc": "" }
+      ]
+    },
+    {
+      "component": "Vocational",
+      "sub_components": [
+        { "sub": "Course Registration", "desc": "" },
+        { "sub": "Industry Linkage", "desc": "" },
+        { "sub": "Skill Assessment", "desc": "" },
+        { "sub": "Infrastructure", "desc": "" }
+      ]
+    }
+  ]
 }

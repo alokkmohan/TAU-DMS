@@ -142,3 +142,53 @@ function migrateDropdowns(token) {
     return errorResponse(e.message);
   }
 }
+
+// ── ONE-TIME SETUP: Populate Dropdowns Sheet from dropdowns.json ─
+// Run this once from GAS Editor if Dropdowns sheet is empty
+function setupDropdownsSheet() {
+  const STATIC = [
+    { component: 'Academics', sub_component: 'Curriculum Planning',  description: '' },
+    { component: 'Academics', sub_component: 'Exam & Assessment',    description: '' },
+    { component: 'Academics', sub_component: 'Teacher Training',     description: '' },
+    { component: 'Academics', sub_component: 'Student Enrollment',   description: '' },
+    { component: 'Academics', sub_component: 'Learning Outcomes',    description: '' },
+    { component: 'Academics', sub_component: 'Patrachar',            description: '' },
+    { component: 'Civil',     sub_component: 'Construction',         description: '' },
+    { component: 'Civil',     sub_component: 'Maintenance',          description: '' },
+    { component: 'Civil',     sub_component: 'Inspection Report',    description: '' },
+    { component: 'Civil',     sub_component: 'Procurement',          description: '' },
+    { component: 'Govt Support', sub_component: 'Circulars & Orders', description: '' },
+    { component: 'Govt Support', sub_component: 'RTI',               description: '' },
+    { component: 'Govt Support', sub_component: 'Grants & Funds',    description: '' },
+    { component: 'Govt Support', sub_component: 'Compliance',        description: '' },
+    { component: 'IT',        sub_component: 'ICT Lab Setup',        description: '' },
+    { component: 'IT',        sub_component: 'Software & Systems',   description: '' },
+    { component: 'IT',        sub_component: 'Smart Class',          description: '' },
+    { component: 'IT',        sub_component: 'Data Management',      description: '' },
+    { component: 'IT',        sub_component: 'Technical Support',    description: '' },
+    { component: 'Vocational', sub_component: 'Course Registration', description: '' },
+    { component: 'Vocational', sub_component: 'Industry Linkage',    description: '' },
+    { component: 'Vocational', sub_component: 'Skill Assessment',    description: '' },
+    { component: 'Vocational', sub_component: 'Infrastructure',      description: '' },
+  ];
+
+  const sheet   = getSheet(CONFIG.TABS.DROPDOWNS);
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const existing = getSheetData(CONFIG.TABS.DROPDOWNS);
+
+  let added = 0;
+  STATIC.forEach(function(row) {
+    const exists = existing.find(function(r) {
+      return r.component === row.component && r.sub_component === row.sub_component;
+    });
+    if (!exists) {
+      const newRow = headers.map(function(h) { return row[h] !== undefined ? row[h] : ''; });
+      sheet.appendRow(newRow);
+      added++;
+    }
+  });
+
+  invalidateCache(CONFIG.TABS.DROPDOWNS);
+  Logger.log('Setup complete. Added ' + added + ' rows.');
+  return { success: true, message: 'Added ' + added + ' rows to Dropdowns sheet.' };
+}
