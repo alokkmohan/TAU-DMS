@@ -185,7 +185,7 @@
     <!-- SECTION: Upload -->
     <div class="section" id="sec-upload">
       <div class="card">
-        <div class="card-title">📤 Naya Document Upload</div>
+        <div class="card-title">📤 Upload New Document</div>
         <div class="alert alert-success" id="uploadAlert"></div>
 
         <div class="form-row">
@@ -653,7 +653,7 @@
 
   function confirmReject() {
     const remark = document.getElementById('rejectRemark').value.trim();
-    if (!remark) { alert('Rejection reason zaroori hai.'); return; }
+    if (!remark) { alert('Rejection reason is required.'); return; }
     google.script.run
       .withSuccessHandler(res => {
         closeRejectModal();
@@ -681,7 +681,7 @@
     }
     tbody.innerHTML = rows.map((r, i) => {
       const ackBtn = ROLE === 'manager' && !r.acknowledged
-        ? `<button class="btn btn-success btn-sm" onclick="acknowledgeCircular('${r.circular_id}', this)">✅ Maine padh liya</button>`
+        ? `<button class="btn btn-success btn-sm" onclick="acknowledgeCircular('${r.circular_id}', this)">✅ Acknowledge</button>`
         : ROLE === 'manager' && r.acknowledged
           ? '<span style="color:#2e7d32;font-weight:600">✅ Acknowledged</span>'
           : `<span style="font-size:0.8rem;color:#757575">${r.ack_count}/${r.total_managers} acknowledged</span>`;
@@ -710,7 +710,7 @@
           btn.outerHTML = '<span style="color:#2e7d32;font-weight:600">✅ Acknowledged</span>';
         } else {
           btn.disabled = false;
-          btn.textContent = '✅ Maine padh liya';
+          btn.textContent = '✅ Acknowledged';
           alert(res.message);
         }
       }).acknowledgeCircular(TOKEN, circularId);

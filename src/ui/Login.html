@@ -142,18 +142,18 @@
   <!-- Step 1: Email -->
   <div id="emailSection">
     <label for="emailInput">Email ID</label>
-    <input type="email" id="emailInput" placeholder="aapka@educategirls.ngo" autocomplete="email">
-    <button class="btn" id="sendOtpBtn" onclick="sendOTP()">OTP Bhejein</button>
+    <input type="email" id="emailInput" placeholder="your@educategirls.ngo" autocomplete="email">
+    <button class="btn" id="sendOtpBtn" onclick="sendOTP()">Send OTP</button>
   </div>
 
   <!-- Step 2: OTP -->
   <div class="otp-section" id="otpSection">
     <hr class="divider">
     <p class="otp-info" id="otpInfo"></p>
-    <label for="otpInput">OTP Darj Karein</label>
+    <label for="otpInput">Enter OTP</label>
     <input type="text" id="otpInput" placeholder="6-digit OTP" maxlength="6" autocomplete="one-time-code">
-    <button class="btn" id="verifyOtpBtn" onclick="verifyOTP()">Login Karein</button>
-    <span class="resend-link" onclick="resendOTP()">OTP dobara bhejein</span>
+    <button class="btn" id="verifyOtpBtn" onclick="verifyOTP()">Login</button>
+    <span class="resend-link" onclick="resendOTP()">Resend OTP</span>
   </div>
 
   <div class="msg" id="msgBox"></div>
@@ -177,61 +177,61 @@
     const btn = document.getElementById(btnId);
     btn.disabled = loading;
     btn.innerHTML = loading
-      ? '<span class="spinner"></span>Thoda ruko...'
+      ? '<span class="spinner"></span>Please wait...'
       : defaultText;
   }
 
   function sendOTP() {
     const email = document.getElementById('emailInput').value.trim().toLowerCase();
-    if (!email) { showMsg('Email daalna zaroori hai.', 'error'); return; }
+    if (!email) { showMsg('Email is required.', 'error'); return; }
     if (!email.endsWith('@educategirls.ngo')) {
-      showMsg('Sirf educategirls.ngo email allowed hai.', 'error'); return;
+      showMsg('Only educategirls.ngo email addresses are allowed.', 'error'); return;
     }
 
     hideMsg();
-    setLoading('sendOtpBtn', true, 'OTP Bhejein');
+    setLoading('sendOtpBtn', true, 'Send OTP');
 
     google.script.run
       .withSuccessHandler(function(res) {
-        setLoading('sendOtpBtn', false, 'OTP Bhejein');
+        setLoading('sendOtpBtn', false, 'Send OTP');
         if (!res.success) { showMsg(res.message, 'error'); return; }
         currentEmail = email;
         document.getElementById('otpSection').style.display = 'block';
         document.getElementById('otpInfo').textContent =
-          'OTP bheja gaya: ' + email + ' par (10 minute valid)';
+          'OTP sent to: ' + email + ' (valid for 10 minutes)';
         document.getElementById('otpInput').focus();
-        showMsg('OTP aapke email par bheja gaya hai.', 'success');
+        showMsg('OTP has been sent to your email.', 'success');
       })
       .withFailureHandler(function(err) {
-        setLoading('sendOtpBtn', false, 'OTP Bhejein');
-        showMsg('Server error. Dobara try karein.', 'error');
+        setLoading('sendOtpBtn', false, 'Send OTP');
+        showMsg('Server error. Please try again.', 'error');
       })
       .sendOTP(email);
   }
 
   function verifyOTP() {
     const otp = document.getElementById('otpInput').value.trim();
-    if (!otp || otp.length !== 6) { showMsg('6-digit OTP sahi se daalen.', 'error'); return; }
+    if (!otp || otp.length !== 6) { showMsg('Please enter the 6-digit OTP.', 'error'); return; }
 
     hideMsg();
-    setLoading('verifyOtpBtn', true, 'Login Karein');
+    setLoading('verifyOtpBtn', true, 'Login');
 
     google.script.run
       .withSuccessHandler(function(res) {
-        setLoading('verifyOtpBtn', false, 'Login Karein');
+        setLoading('verifyOtpBtn', false, 'Login');
         if (!res.success) { showMsg(res.message, 'error'); return; }
         // Store token in sessionStorage and redirect to dashboard
         sessionStorage.setItem('dms_token', res.data.token);
         sessionStorage.setItem('dms_role', res.data.role);
         sessionStorage.setItem('dms_name', res.data.name);
-        showMsg('Login successful! Dashboard load ho raha hai...', 'success');
+        showMsg('Login successful! Loading dashboard...', 'success');
         google.script.run
           .withSuccessHandler(function(url) { window.top.location.href = url; })
           .getDashboardUrl();
       })
       .withFailureHandler(function(err) {
-        setLoading('verifyOtpBtn', false, 'Login Karein');
-        showMsg('Server error. Dobara try karein.', 'error');
+        setLoading('verifyOtpBtn', false, 'Login');
+        showMsg('Server error. Please try again.', 'error');
       })
       .verifyOTP(currentEmail, otp);
   }

@@ -91,7 +91,7 @@ function acknowledgeCircular(token, circularId) {
     // Check not already acknowledged
     const acks = getSheetData(CONFIG.TABS.CIRCULAR_ACK);
     const already = acks.find(a => a.circular_id === circularId && a.manager_email === session.email);
-    if (already) return errorResponse('Aap pehle hi acknowledge kar chuke hain.');
+    if (already) return errorResponse('You have already acknowledged this circular.');
 
     appendRow(CONFIG.TABS.CIRCULAR_ACK, {
       circular_id:     circularId,

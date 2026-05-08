@@ -413,7 +413,7 @@
           </div>
           <!-- Custom component (if not in list) -->
           <div id="customCompGroup" style="display:none;margin-top:-8px;margin-bottom:8px;padding:10px 12px;background:#f3f4f6;border-radius:6px;border:1px dashed #9e9e9e">
-            <div style="font-size:0.85rem;color:#555;margin-bottom:6px">➕ Add new component (first sub-component bhi zaroori hai)</div>
+            <div style="font-size:0.85rem;color:#555;margin-bottom:6px">➕ Add new component (first sub-component is also required)</div>
             <div class="form-row" style="gap:8px">
               <div class="form-group" style="margin-bottom:0">
                 <input type="text" id="customCompName" placeholder="Component name *">
@@ -672,14 +672,14 @@
 <div class="modal-overlay" id="uploadSuccessModal">
   <div class="modal" style="text-align:center;max-width:420px">
     <div style="font-size:3rem;margin-bottom:10px">✅</div>
-    <div style="font-size:1.2rem;font-weight:700;color:#166534;margin-bottom:8px">Document Upload Ho Gaya!</div>
+    <div style="font-size:1.2rem;font-weight:700;color:#166534;margin-bottom:8px">Document Uploaded Successfully!</div>
     <div id="uploadSuccessFileName" style="font-size:0.88rem;color:#555;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px 12px;margin-bottom:20px;word-break:break-all"></div>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
       <button class="btn btn-outline" style="min-width:160px" onclick="uploadSuccessGoHome()">
         <i class="fa-solid fa-house"></i>&nbsp; Home Dashboard
       </button>
       <button class="btn btn-primary" style="min-width:160px" onclick="uploadSuccessAnother()">
-        <i class="fa-solid fa-cloud-arrow-up"></i>&nbsp; Ek aur Upload karo
+        <i class="fa-solid fa-cloud-arrow-up"></i>&nbsp; Upload Another
       </button>
     </div>
   </div>
@@ -1230,7 +1230,7 @@ function saveCustomComponent() {
   var name=(document.getElementById('customCompName').value||'').trim();
   var sub=(document.getElementById('customCompFirstSub').value||'').trim();
   var desc=(document.getElementById('customCompDesc').value||'').trim();
-  if (!name||!sub){alert('Component name aur pehla sub-component zaroori hai.');return;}
+  if (!name||!sub){alert('Component name and first sub-component are required.');return;}
   var btn=document.querySelector('#customCompGroup .btn-outline');
   btn.disabled=true; btn.textContent='Saving...';
   api('addComponent',SESSION.token,name,sub,desc).then(function(res){
@@ -1250,7 +1250,7 @@ function saveCustomComponent() {
     document.getElementById('customCompName').value='';
     document.getElementById('customCompFirstSub').value='';
     document.getElementById('customCompDesc').value='';
-    showUploadAlert('Naya component added!','success');
+    showUploadAlert('Component added successfully!','success');
   });
 }
 
@@ -1259,8 +1259,8 @@ function saveCustomSubComponent() {
   var comp=document.getElementById('componentSelect').value;
   var sub=(document.getElementById('customSubName').value||'').trim();
   var desc=(document.getElementById('customSubDesc').value||'').trim();
-  if(!comp){alert('Pehle component select karo.');return;}
-  if(!sub){alert('Sub-component name zaroori hai.');return;}
+  if(!comp){alert('Please select a component first.');return;}
+  if(!sub){alert('Sub-component name is required.');return;}
   var btn=document.querySelector('#customSubGroup .btn-outline');
   btn.disabled=true; btn.textContent='Saving...';
   api('addSubComponent',SESSION.token,comp,sub,desc).then(function(res){
@@ -1275,7 +1275,7 @@ function saveCustomSubComponent() {
     document.getElementById('customSubGroup').style.display='none';
     document.getElementById('customSubName').value='';
     document.getElementById('customSubDesc').value='';
-    showUploadAlert('Naya sub-component added!','success');
+    showUploadAlert('Sub-component added successfully!','success');
   });
 }
 
