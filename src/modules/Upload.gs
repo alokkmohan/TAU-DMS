@@ -4,20 +4,31 @@ function getDashboardInit(token) {
     const session    = requireAuth(token);
     const rows       = getSheetData(CONFIG.TABS.DROPDOWNS);
     const access     = _getUserComponentAccess(session.email);
-    let   components = [...new Set(rows.map(r => r.component))].filter(Boolean);
+
+    // Reuse getDocuments logic inline (avoids second requireAuth round-trip)
+    const docsResult = getDocuments(token, {});
+    const docs       = docsResult.success ? docsResult.data : [];
+
+    // Components from Dropdowns sheet
+    let dropdownComps = [...new Set(rows.map(r => r.component))].filter(Boolean);
+
+    // Also collect components from actual uploaded documents (fallback if Dropdowns is empty)
+    const docComps = [...new Set(docs.map(d => d.component))].filter(Boolean);
+
+    // Merge: union of both, then apply access filter
+    let allCompsSet = [...new Set([...dropdownComps, ...docComps])].sort();
+
+    let components = allCompsSet;
     if (access !== 'ALL') {
       const allowed = access.split(',').map(s => s.trim().toLowerCase());
       components = components.filter(c => allowed.includes(c.toLowerCase()));
     }
 
-    // Reuse getDocuments logic inline (avoids second requireAuth round-trip)
-    const docsResult = getDocuments(token, {});
-
     return successResponse({
-      components: components,
-      allComponents: [...new Set(rows.map(r => r.component))].filter(Boolean),
+      components:    components,
+      allComponents: allCompsSet,
       subComponents: rows.map(r => ({ component: r.component, sub: r.sub_component, desc: r.description })),
-      documents: docsResult.success ? docsResult.data : []
+      documents:     docs
     });
   } catch(e) {
     return errorResponse(e.message);

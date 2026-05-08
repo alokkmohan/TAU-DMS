@@ -759,10 +759,18 @@ function showDashboard() {
   api('getDashboardInit', SESSION.token).then(function(res) {
     if (!res.success) { showSection('home'); return; }
     var d = res.data;
-    // Populate component dropdowns from init data
+    // Populate component dropdowns — use Dropdowns sheet, fallback to doc components
+    var compList = d.components || [];
+    if (compList.length === 0 && d.documents && d.documents.length > 0) {
+      var fromDocs = [];
+      d.documents.forEach(function(doc) {
+        if (doc.component && fromDocs.indexOf(doc.component) === -1) fromDocs.push(doc.component);
+      });
+      compList = fromDocs.sort();
+    }
     ['componentSelect', 'filterComponent', 'allFilterComponent', 'homeFilterComponent'].forEach(function(id) {
       var sel = document.getElementById(id); if (!sel) return;
-      (d.components || []).forEach(function(c) {
+      compList.forEach(function(c) {
         var o = document.createElement('option'); o.value = o.textContent = c; sel.appendChild(o);
       });
     });
