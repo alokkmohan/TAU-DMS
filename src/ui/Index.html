@@ -951,13 +951,25 @@ function loadHome() {
 
     renderStatCards(cards);
 
-    var yearSel = document.getElementById('homeFilterYear');
-    if (yearSel && yearSel.options.length === 1) {
-      var years = [...new Set(docs.map(function(d){ return d.year; }).filter(Boolean))].sort().reverse();
-      years.forEach(function(y) {
-        var o = document.createElement('option'); o.value = o.textContent = y; yearSel.appendChild(o);
-      });
-    }
+     var yearSel = document.getElementById('homeFilterYear');
+     if (yearSel && yearSel.options.length === 1) {
+       var years = [...new Set(docs.map(function(d){ return d.year; }).filter(Boolean))].sort().reverse();
+       years.forEach(function(y) {
+         var o = document.createElement('option'); o.value = o.textContent = y; yearSel.appendChild(o);
+       });
+     }
+     var compSel = document.getElementById('homeFilterComponent');
+     if (compSel) {
+       var existingVals = [];
+       for (var ci = 0; ci < compSel.options.length; ci++) existingVals.push(compSel.options[ci].value);
+       var docComps = [];
+       docs.forEach(function(d) { if (d.component && docComps.indexOf(d.component) === -1) docComps.push(d.component); });
+       docComps.sort().forEach(function(c) {
+         if (existingVals.indexOf(c) === -1) {
+           var o = document.createElement('option'); o.value = o.textContent = c; compSel.appendChild(o);
+         }
+       });
+     }
 
     filterHomeDocs();
   }).catch(function() {
