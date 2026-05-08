@@ -1,3 +1,29 @@
+// ── Single init call: returns components + documents together ──
+function getDashboardInit(token) {
+  try {
+    const session    = requireAuth(token);
+    const rows       = getSheetData(CONFIG.TABS.DROPDOWNS);
+    const access     = _getUserComponentAccess(session.email);
+    let   components = [...new Set(rows.map(r => r.component))].filter(Boolean);
+    if (access !== 'ALL') {
+      const allowed = access.split(',').map(s => s.trim().toLowerCase());
+      components = components.filter(c => allowed.includes(c.toLowerCase()));
+    }
+
+    // Reuse getDocuments logic inline (avoids second requireAuth round-trip)
+    const docsResult = getDocuments(token, {});
+
+    return successResponse({
+      components: components,
+      allComponents: [...new Set(rows.map(r => r.component))].filter(Boolean),
+      subComponents: rows.map(r => ({ component: r.component, sub: r.sub_component, desc: r.description })),
+      documents: docsResult.success ? docsResult.data : []
+    });
+  } catch(e) {
+    return errorResponse(e.message);
+  }
+}
+
 // ── Add a new component (with its first sub-component) ─────────
 function addComponent(token, component, subComponent, description) {
   try {

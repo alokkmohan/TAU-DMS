@@ -23,6 +23,9 @@ function _route(action, p) {
     case 'verifyOTP':         return verifyOTP(p[0], p[1]);
     case 'logoutUser':        return logoutUser(p[0]);
 
+    // ── Dashboard init (single call) ─────────
+    case 'getDashboardInit':  return getDashboardInit(p[0]);
+
     // ── Upload / Documents ────────────────────
     case 'getComponents':     return getComponents(p[0]);
     case 'getSubComponents':  return getSubComponents(p[0], p[1]);

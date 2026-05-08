@@ -652,6 +652,20 @@ function api(action) {
 // ════════════════════════════════════════════════
 var SESSION = { token: null, role: null, name: null, email: null };
 
+var CACHE   = { docs: null, docsAt: 0, TTL: 90000 };
+var SUBCACHE = {};
+
+function cachedGetDocuments() {
+  if (CACHE.docs && (Date.now() - CACHE.docsAt) < CACHE.TTL) {
+    return Promise.resolve({ success: true, data: CACHE.docs });
+  }
+  return api('getDocuments', SESSION.token, {}).then(function(res) {
+    if (res.success) { CACHE.docs = res.data; CACHE.docsAt = Date.now(); }
+    return res;
+  });
+}
+function bustDocsCache() { CACHE.docs = null; CACHE.docsAt = 0; }
+
 function initApp() {
   var token = sessionStorage.getItem('dms_token');
   var role  = sessionStorage.getItem('dms_role');
@@ -681,9 +695,30 @@ function showDashboard() {
   };
   document.getElementById('roleDisplay').textContent = roleLabels[SESSION.role] || SESSION.role;
   buildSidebar();
-  loadComponents();
-  populateYearFilters();
-  showSection('home');
+  api('getDashboardInit', SESSION.token).then(function(res) {
+    if (!res.success) { showSection('home'); return; }
+    var d = res.data;
+    ['componentSelect', 'filterComponent', 'allFilterComponent', 'homeFilterComponent'].forEach(function(id) {
+      var sel = document.getElementById(id); if (!sel) return;
+      (d.components || []).forEach(function(c) {
+        var o = document.createElement('option'); o.value = o.textContent = c; sel.appendChild(o);
+      });
+    });
+    var tsel = document.getElementById('targetComponentSelect');
+    if (tsel) (d.allComponents || []).forEach(function(c) {
+      var o = document.createElement('option'); o.value = o.textContent = c; tsel.appendChild(o);
+    });
+    if (d.subComponents) {
+      SUBCACHE = {};
+      d.subComponents.forEach(function(r) {
+        if (!SUBCACHE[r.component]) SUBCACHE[r.component] = [];
+        SUBCACHE[r.component].push({ sub: r.sub, desc: r.desc });
+      });
+    }
+    if (d.documents) { CACHE.docs = d.documents; CACHE.docsAt = Date.now(); }
+    populateYearFilters();
+    showSection('home');
+  }).catch(function() { showSection('home'); });
 }
 
 // ════════════════════════════════════════════════
@@ -1052,6 +1087,7 @@ function submitUpload() {
     .then(function(res) {
       btn.disabled = false; btn.innerHTML = 'Upload Document';
       if (!res.success) { showUploadAlert(res.message, 'error'); return; }
+      bustDocsCache();
       showUploadAlert(res.data.message + ' | File: ' + res.data.fileName, 'success');
       resetUploadForm();
     })
@@ -1084,15 +1120,33 @@ function resetUploadForm() {
 //  DOCUMENTS
 // ════════════════════════════════════════════════
 function loadDocs() {
-  document.getElementById('docsTableBody').innerHTML = '<tr><td colspan=\"8\" class=\"no-data\">Loading...</td></tr>';
-  api('getDocuments', SESSION.token, getFilters('filter'))
-    .then(function(res) { if (!res.success) return; renderDocsTable('docsTableBody', res.data, false); });
+  document.getElementById('docsTableBody').innerHTML = '<tr><td colspan="8" class="no-data">Loading...</td></tr>';
+  cachedGetDocuments().then(function(res) {
+    if (!res.success) return;
+    renderDocsTable('docsTableBody', clientFilter(res.data, getFilters('filter')), false);
+  });
 }
 
 function loadAllDocs() {
-  document.getElementById('allDocsTableBody').innerHTML = '<tr><td colspan=\"8\" class=\"no-data\">Loading...</td></tr>';
-  api('getDocuments', SESSION.token, getFilters('allFilter'))
-    .then(function(res) { if (!res.success) return; renderDocsTable('allDocsTableBody', res.data, true); });
+  document.getElementById('allDocsTableBody').innerHTML = '<tr><td colspan="8" class="no-data">Loading...</td></tr>';
+  cachedGetDocuments().then(function(res) {
+    if (!res.success) return;
+    renderDocsTable('allDocsTableBody', clientFilter(res.data, getFilters('allFilter')), true);
+  });
+}
+
+function clientFilter(docs, f) {
+  return docs.filter(function(d) {
+    if (f.year      && String(d.year)      !== String(f.year))      return false;
+    if (f.month     && String(d.month)     !== String(f.month))     return false;
+    if (f.component && String(d.component) !== String(f.component)) return false;
+    if (f.status    && d.status            !== f.status)            return false;
+    if (f.search) {
+      var q = f.search.toLowerCase();
+      if (!((d.subject||'').toLowerCase().includes(q)||(d.file_name||'').toLowerCase().includes(q))) return false;
+    }
+    return true;
+  });
 }
 
 function getFilters(prefix) {
@@ -1162,7 +1216,7 @@ var rejectDocId = null;
 function verifyDoc(docId) {
   if (!confirm('Verify this document?')) return;
   api('verifyDocument', SESSION.token, docId)
-    .then(function(res) { alert(res.success ? 'Document verified!' : res.message); loadAllDocs(); });
+    .then(function(res) { bustDocsCache(); alert(res.success ? 'Document verified!' : res.message); loadAllDocs(); });
 }
 
 function openRejectModal(docId) {
@@ -1175,7 +1229,7 @@ function confirmReject() {
   var remark = document.getElementById('rejectRemark').value.trim();
   if (!remark) { alert('Please enter a rejection reason.'); return; }
   api('rejectDocument', SESSION.token, rejectDocId, remark)
-    .then(function(res) { closeRejectModal(); alert(res.success ? 'Document rejected.' : res.message); loadAllDocs(); });
+    .then(function(res) { bustDocsCache(); closeRejectModal(); alert(res.success ? 'Document rejected.' : res.message); loadAllDocs(); });
 }
 
 // ════════════════════════════════════════════════
