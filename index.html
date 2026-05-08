@@ -711,6 +711,29 @@ function api(action) {
 // ════════════════════════════════════════════════
 var SESSION = { token: null, role: null, name: null, email: null };
 
+// ── localStorage cache for dropdowns (24h TTL — rarely changes) ──
+var DD_LS_KEY = 'dms_dd_v1';
+var DD_LS_TTL = 86400000; // 24 hours
+
+function getLocalDropdowns() {
+  try {
+    var raw = localStorage.getItem(DD_LS_KEY);
+    if (!raw) return null;
+    var d = JSON.parse(raw);
+    if (Date.now() - d.ts > DD_LS_TTL) { localStorage.removeItem(DD_LS_KEY); return null; }
+    return d;
+  } catch(e) { return null; }
+}
+function setLocalDropdowns(components, allComponents, subComponents) {
+  try {
+    localStorage.setItem(DD_LS_KEY, JSON.stringify({
+      components: components, allComponents: allComponents,
+      subComponents: subComponents, ts: Date.now()
+    }));
+  } catch(e) {}
+}
+function clearLocalDropdowns() { try { localStorage.removeItem(DD_LS_KEY); } catch(e) {} }
+
 // ── In-memory data cache (avoids repeat API calls within session) ──
 var CACHE = { docs: null, docsAt: 0, TTL: 90000 }; // 90 sec TTL
 
@@ -755,38 +778,60 @@ function showDashboard() {
   };
   document.getElementById('roleDisplay').textContent = roleLabels[SESSION.role] || SESSION.role;
   buildSidebar();
-  // Single init call — populates components + pre-warms doc cache
-  api('getDashboardInit', SESSION.token).then(function(res) {
-    if (!res.success) { showSection('home'); return; }
-    var d = res.data;
-    // Populate component dropdowns — use Dropdowns sheet, fallback to doc components
-    var compList = d.components || [];
-    if (compList.length === 0 && d.documents && d.documents.length > 0) {
-      var fromDocs = [];
-      d.documents.forEach(function(doc) {
-        if (doc.component && fromDocs.indexOf(doc.component) === -1) fromDocs.push(doc.component);
+
+  // ── Helper: wire dropdowns from component data ───────────────
+  function applyDropdownData(components, allComponents, subComponents, docs) {
+    var compList = components || [];
+    // Fallback: derive from docs if list still empty
+    if (compList.length === 0 && docs && docs.length > 0) {
+      docs.forEach(function(doc) {
+        if (doc.component && compList.indexOf(doc.component) === -1) compList.push(doc.component);
       });
-      compList = fromDocs.sort();
+      compList.sort();
     }
     ['componentSelect', 'filterComponent', 'allFilterComponent', 'homeFilterComponent'].forEach(function(id) {
       var sel = document.getElementById(id); if (!sel) return;
+      // Clear old options (keep first "All/placeholder")
+      while (sel.options.length > 1) sel.remove(1);
       compList.forEach(function(c) {
         var o = document.createElement('option'); o.value = o.textContent = c; sel.appendChild(o);
       });
     });
     var tsel = document.getElementById('targetComponentSelect');
-    if (tsel) (d.allComponents || []).forEach(function(c) {
-      var o = document.createElement('option'); o.value = o.textContent = c; tsel.appendChild(o);
-    });
-    // Pre-populate sub-component map for instant cascade
-    if (d.subComponents) {
-      SUBCACHE = {};
-      d.subComponents.forEach(function(r) {
-        if (!SUBCACHE[r.component]) SUBCACHE[r.component] = [];
-        SUBCACHE[r.component].push({ sub: r.sub, desc: r.desc });
+    if (tsel) {
+      while (tsel.options.length > 1) tsel.remove(1);
+      (allComponents || compList).forEach(function(c) {
+        var o = document.createElement('option'); o.value = o.textContent = c; tsel.appendChild(o);
       });
     }
-    // Seed document cache so Home loads instantly
+    SUBCACHE = {};
+    (subComponents || []).forEach(function(r) {
+      if (!SUBCACHE[r.component]) SUBCACHE[r.component] = [];
+      SUBCACHE[r.component].push({ sub: r.sub, desc: r.desc });
+    });
+  }
+
+  // ── Fast path: dropdowns from localStorage (24h cache) ───────
+  var cachedDD = getLocalDropdowns();
+  if (cachedDD) {
+    applyDropdownData(cachedDD.components, cachedDD.allComponents, cachedDD.subComponents, []);
+    // Only fetch documents (no dropdown data needed)
+    cachedGetDocuments().then(function(res) {
+      if (res.success && res.data) { CACHE.docs = res.data; CACHE.docsAt = Date.now(); }
+      populateYearFilters();
+      showSection('home');
+    }).catch(function() { showSection('home'); });
+    return;
+  }
+
+  // ── Slow path: full init call (first visit or cache expired) ─
+  api('getDashboardInit', SESSION.token).then(function(res) {
+    if (!res.success) { showSection('home'); return; }
+    var d = res.data;
+    applyDropdownData(d.components, d.allComponents, d.subComponents, d.documents);
+    // Save dropdowns to localStorage for next 24h
+    setLocalDropdowns(d.components || [], d.allComponents || [], d.subComponents || []);
+    // Seed document cache
     if (d.documents) { CACHE.docs = d.documents; CACHE.docsAt = Date.now(); }
     populateYearFilters();
     showSection('home');
