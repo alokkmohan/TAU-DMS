@@ -306,13 +306,31 @@
 
       <!-- ── HOME ── -->
       <div class="section" id="sec-home">
-        <div id="homeStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:20px;"></div>
+        <div id="homeStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:20px;"></div>
         <div class="card">
-          <div class="card-title">📋 Recent Documents</div>
-          <div class="table-wrap"><table id="homeDocsTable">
-            <thead><tr><th>Subject</th><th>Component</th><th>Uploaded By</th><th>Date</th><th>Status</th></tr></thead>
-            <tbody id="homeDocsTbody"><tr><td colspan="5" class="no-data">Loading...</td></tr></tbody>
-          </table></div>
+          <div class="card-title">📋 All Documents</div>
+          <div class="filters">
+            <select id="homeFilterYear" onchange="filterHomeDocs()"><option value="">All Years</option></select>
+            <select id="homeFilterMonth" onchange="filterHomeDocs()">
+              <option value="">All Months</option>
+              <option>January</option><option>February</option><option>March</option>
+              <option>April</option><option>May</option><option>June</option>
+              <option>July</option><option>August</option><option>September</option>
+              <option>October</option><option>November</option><option>December</option>
+            </select>
+            <select id="homeFilterComponent" onchange="filterHomeDocs()"><option value="">All Components</option></select>
+            <input type="text" id="homeFilterSearch" placeholder="Search subject / uploader..." oninput="filterHomeDocs()" style="min-width:160px">
+            <button class="btn btn-outline btn-sm" onclick="clearHomeFilters()">Clear</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Issued By</th><th>Date</th><th>Component</th><th>Subject</th><th>Download</th></tr></thead>
+              <tbody id="homeDocsTbody"><tr><td colspan="6" class="no-data">Loading...</td></tr></tbody>
+            </table>
+          </div>
+          <div id="homeLoadMoreWrap" style="text-align:center;margin-top:14px;display:none">
+            <button class="btn btn-outline btn-sm" onclick="loadMoreHomeDocs()">Load 20 More ↓</button>
+          </div>
         </div>
       </div>
 
@@ -632,14 +650,15 @@ function api(action) {
 // ════════════════════════════════════════════════
 //  SESSION
 // ════════════════════════════════════════════════
-var SESSION = { token: null, role: null, name: null };
+var SESSION = { token: null, role: null, name: null, email: null };
 
 function initApp() {
   var token = sessionStorage.getItem('dms_token');
   var role  = sessionStorage.getItem('dms_role');
   var name  = sessionStorage.getItem('dms_name');
+  var email = sessionStorage.getItem('dms_email');
   if (token && role && name) {
-    SESSION = { token: token, role: role, name: name };
+    SESSION = { token: token, role: role, name: name, email: email || '' };
     showDashboard();
   } else {
     showLoginPage();
@@ -721,7 +740,8 @@ function verifyOTP() {
       sessionStorage.setItem('dms_token', res.data.token);
       sessionStorage.setItem('dms_role',  res.data.role);
       sessionStorage.setItem('dms_name',  res.data.name);
-      SESSION = { token: res.data.token, role: res.data.role, name: res.data.name };
+      sessionStorage.setItem('dms_email', res.data.email || currentEmail);
+      SESSION = { token: res.data.token, role: res.data.role, name: res.data.name, email: res.data.email || currentEmail };
       showDashboard();
     })
     .catch(function() {
@@ -751,10 +771,6 @@ function buildSidebar() {
     { id: 'upload',   icon: '📤', label: 'Upload Document' },
     { id: 'mydocs',   icon: '📁', label: 'My Documents' }
   ];
-  if (SESSION.role === 'team_lead' || SESSION.role === 'super_admin' ||
-      SESSION.role === 'state_lead' || SESSION.role === 'project_manager' || SESSION.role === 'ceo') {
-    items.push({ id: 'alldocs', icon: '📋', label: 'All Documents' });
-  }
   items.push({ id: 'circulars', icon: '📢', label: 'Circulars' });
 
   document.getElementById('sidebar').innerHTML = items.map(function(item) {
@@ -779,56 +795,129 @@ function showSection(id) {
 // ════════════════════════════════════════════════
 //  HOME DASHBOARD
 // ════════════════════════════════════════════════
+var HOME_ALL_DOCS       = [];
+var HOME_FILTERED_DOCS  = [];
+var HOME_PAGE           = 0;
+var HOME_PAGE_SIZE      = 20;
+
 function loadHome() {
   var statsEl = document.getElementById('homeStats');
   var tbodyEl = document.getElementById('homeDocsTbody');
   if (!statsEl || !tbodyEl) return;
   statsEl.innerHTML = '<div style="grid-column:1/-1;color:#9e9e9e;font-size:0.88rem">Loading...</div>';
-  tbodyEl.innerHTML = '<tr><td colspan="5" class="no-data">Loading...</td></tr>';
+  tbodyEl.innerHTML = '<tr><td colspan="6" class="no-data">Loading...</td></tr>';
 
-  api('getDocuments', SESSION.token, {})
-    .then(function(res) {
-      if (!res.success) { tbodyEl.innerHTML = '<tr><td colspan="5" class="no-data">Could not load data.</td></tr>'; return; }
-      var docs = res.data || [];
-      var total    = docs.length;
-      var pending  = docs.filter(function(d){ return d.status === 'pending'; }).length;
-      var verified = docs.filter(function(d){ return d.status === 'tl_verified'; }).length;
-      var approved = docs.filter(function(d){ return d.status === 'admin_approved'; }).length;
-      var rejected = docs.filter(function(d){ return d.status === 'tl_rejected' || d.status === 'admin_rejected'; }).length;
+  Promise.all([
+    api('getDocuments', SESSION.token, {}),
+    api('getAllComponents', SESSION.token)
+  ]).then(function(results) {
+    var docsRes  = results[0];
+    var compsRes = results[1];
+    if (!docsRes.success) {
+      tbodyEl.innerHTML = '<tr><td colspan="6" class="no-data">Could not load data.</td></tr>';
+      return;
+    }
+    var docs       = docsRes.data  || [];
+    var components = compsRes.success ? (compsRes.data || []) : [];
+    var myDocs     = docs.filter(function(d){ return d.uploader_email === SESSION.email; });
 
-      var cards = [
-        { label: 'Total Documents', value: total,    color: '#1a237e', bg: '#e8eaf6' },
-        { label: 'Pending',         value: pending,  color: '#e65100', bg: '#fff3e0' },
-        { label: 'Verified (TL)',   value: verified, color: '#2e7d32', bg: '#e8f5e9' },
-        { label: 'Approved',        value: approved, color: '#1565c0', bg: '#e3f2fd' },
-        { label: 'Rejected',        value: rejected, color: '#c62828', bg: '#ffebee' }
-      ];
-      statsEl.innerHTML = cards.map(function(c) {
-        return '<div style="background:' + c.bg + ';border-radius:10px;padding:18px 16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.08)">' +
-               '<div style="font-size:2rem;font-weight:700;color:' + c.color + '">' + c.value + '</div>' +
-               '<div style="font-size:0.78rem;color:#555;margin-top:4px;font-weight:600">' + c.label + '</div></div>';
-      }).join('');
+    HOME_ALL_DOCS = docs;
 
-      var recent = docs.slice(0, 20);
-      if (!recent.length) {
-        tbodyEl.innerHTML = '<tr><td colspan="5" class="no-data">No documents found.</td></tr>';
-        return;
-      }
-      var statusLabel = { pending:'Pending', tl_verified:'TL Verified', tl_rejected:'TL Rejected',
-                          admin_approved:'Approved', admin_rejected:'Rejected', archived:'Archived' };
-      var statusClass = { pending:'badge-pending', tl_verified:'badge-verified', tl_rejected:'badge-rejected',
-                          admin_approved:'badge-approved', admin_rejected:'badge-rejected', archived:'badge-archived' };
-      tbodyEl.innerHTML = recent.map(function(d) {
-        return '<tr><td>' + (d.subject||'-') + '</td>' +
-               '<td>' + (d.component||'-') + ' › ' + (d.sub_component||'-') + '</td>' +
-               '<td>' + (d.uploader_name||'-') + '</td>' +
-               '<td>' + (d.month||'') + ' ' + (d.year||'') + '</td>' +
-               '<td><span class="badge ' + (statusClass[d.status]||'') + '">' + (statusLabel[d.status]||d.status) + '</span></td></tr>';
-      }).join('');
-    })
-    .catch(function() {
-      tbodyEl.innerHTML = '<tr><td colspan="5" class="no-data">Error loading data.</td></tr>';
-    });
+    // ── Stats ──────────────────────────────────────────────────
+    var cards = [
+      { label: 'Total Components', value: components.length, color: '#4527a0', bg: '#ede7f6' },
+      { label: 'Total Documents',  value: docs.length,       color: '#1a237e', bg: '#e8eaf6' },
+      { label: 'My Documents',     value: myDocs.length,     color: '#00695c', bg: '#e0f2f1' }
+    ];
+    statsEl.innerHTML = cards.map(function(c) {
+      return '<div style="background:' + c.bg + ';border-radius:10px;padding:20px 16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.08);cursor:default">' +
+             '<div style="font-size:2.2rem;font-weight:700;color:' + c.color + '">' + c.value + '</div>' +
+             '<div style="font-size:0.8rem;color:#555;margin-top:5px;font-weight:600">' + c.label + '</div></div>';
+    }).join('');
+
+    // ── Populate year filter ──────────────────────────────────
+    var yearSel = document.getElementById('homeFilterYear');
+    if (yearSel && yearSel.options.length === 1) {
+      var years = [...new Set(docs.map(function(d){ return d.year; }).filter(Boolean))].sort().reverse();
+      years.forEach(function(y) {
+        var o = document.createElement('option'); o.value = o.textContent = y; yearSel.appendChild(o);
+      });
+    }
+
+    filterHomeDocs();
+  }).catch(function() {
+    document.getElementById('homeDocsTbody').innerHTML = '<tr><td colspan="6" class="no-data">Error loading data.</td></tr>';
+  });
+}
+
+function filterHomeDocs() {
+  var year  = (document.getElementById('homeFilterYear')      || {}).value || '';
+  var month = (document.getElementById('homeFilterMonth')     || {}).value || '';
+  var comp  = (document.getElementById('homeFilterComponent') || {}).value || '';
+  var q     = ((document.getElementById('homeFilterSearch')   || {}).value || '').toLowerCase().trim();
+
+  HOME_FILTERED_DOCS = HOME_ALL_DOCS.filter(function(d) {
+    if (year  && d.year      !== year)  return false;
+    if (month && d.month     !== month) return false;
+    if (comp  && d.component !== comp)  return false;
+    if (q && !(
+      (d.subject       || '').toLowerCase().includes(q) ||
+      (d.uploader_name || '').toLowerCase().includes(q) ||
+      (d.component     || '').toLowerCase().includes(q)
+    )) return false;
+    return true;
+  });
+
+  HOME_PAGE = 0;
+  renderHomeDocs(false);
+}
+
+function clearHomeFilters() {
+  ['homeFilterYear','homeFilterMonth','homeFilterComponent'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  var s = document.getElementById('homeFilterSearch'); if (s) s.value = '';
+  filterHomeDocs();
+}
+
+function renderHomeDocs(append) {
+  var tbodyEl = document.getElementById('homeDocsTbody');
+  var moreWrap = document.getElementById('homeLoadMoreWrap');
+  var start = HOME_PAGE * HOME_PAGE_SIZE;
+  var slice = HOME_FILTERED_DOCS.slice(start, start + HOME_PAGE_SIZE);
+
+  if (!append) {
+    if (!HOME_FILTERED_DOCS.length) {
+      tbodyEl.innerHTML = '<tr><td colspan="6" class="no-data">No documents found.</td></tr>';
+      if (moreWrap) moreWrap.style.display = 'none';
+      return;
+    }
+    tbodyEl.innerHTML = '';
+  }
+
+  slice.forEach(function(d, i) {
+    var row = document.createElement('tr');
+    var num = start + i + 1;
+    var dl  = d.drive_link
+      ? '<a href="' + d.drive_link + '" target="_blank" class="btn btn-outline btn-sm">⬇ Download</a>'
+      : '-';
+    row.innerHTML =
+      '<td>' + num + '</td>' +
+      '<td>' + (d.uploader_name || '-') + '</td>' +
+      '<td style="white-space:nowrap">' + (d.month || '') + ' ' + (d.year || '') + '</td>' +
+      '<td>' + (d.component || '-') + '</td>' +
+      '<td>' + (d.subject || '-') + '</td>' +
+      '<td>' + dl + '</td>';
+    tbodyEl.appendChild(row);
+  });
+
+  var shown = (HOME_PAGE + 1) * HOME_PAGE_SIZE;
+  if (moreWrap) moreWrap.style.display = shown < HOME_FILTERED_DOCS.length ? 'block' : 'none';
+}
+
+function loadMoreHomeDocs() {
+  HOME_PAGE++;
+  renderHomeDocs(true);
 }
 
 // ════════════════════════════════════════════════
@@ -845,7 +934,7 @@ function loadComponents() {
   api('getComponents', SESSION.token)
     .then(function(res) {
       if (!res.success) return;
-      ['componentSelect', 'filterComponent', 'allFilterComponent'].forEach(function(id) {
+      ['componentSelect', 'filterComponent', 'allFilterComponent', 'homeFilterComponent'].forEach(function(id) {
         var sel = document.getElementById(id);
         if (!sel) return;
         res.data.forEach(function(c) {
