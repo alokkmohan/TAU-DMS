@@ -1198,6 +1198,95 @@ function fillDescription() {
   if (opt && opt.dataset.desc) document.getElementById('descriptionInput').value = opt.dataset.desc;
 }
 
+// ── Toggle custom component / sub-component input panels ──────
+function toggleCustomComp(e) {
+  e.preventDefault();
+  var g = document.getElementById('customCompGroup');
+  g.style.display = g.style.display === 'none' ? 'block' : 'none';
+}
+function toggleCustomSub(e) {
+  e.preventDefault();
+  var g = document.getElementById('customSubGroup');
+  g.style.display = g.style.display === 'none' ? 'block' : 'none';
+}
+
+// ── Save new component → Sheet + reload dropdowns ─────────────
+function saveCustomComponent() {
+  var name = (document.getElementById('customCompName').value || '').trim();
+  var sub  = (document.getElementById('customCompFirstSub').value || '').trim();
+  var desc = (document.getElementById('customCompDesc').value || '').trim();
+  if (!name || !sub) { alert('Component name aur pehla sub-component zaroori hai.'); return; }
+
+  var btn = document.querySelector('#customCompGroup .btn-outline');
+  btn.disabled = true; btn.textContent = 'Saving...';
+
+  api('addComponent', SESSION.token, name, sub, desc).then(function(res) {
+    btn.disabled = false; btn.textContent = 'Save & Use';
+    if (!res.success) { alert(res.message || 'Error saving component.'); return; }
+
+    // Clear localStorage dropdown cache — next load will fetch fresh from Sheet
+    clearLocalDropdowns();
+
+    // Add to dropdown immediately (no page reload needed)
+    ['componentSelect', 'filterComponent', 'allFilterComponent', 'homeFilterComponent'].forEach(function(id) {
+      var sel = document.getElementById(id); if (!sel) return;
+      var exists = Array.from(sel.options).some(function(o){ return o.value === name; });
+      if (!exists) { var o = document.createElement('option'); o.value = o.textContent = name; sel.appendChild(o); }
+    });
+    // Also update SUBCACHE
+    if (!SUBCACHE[name]) SUBCACHE[name] = [];
+    SUBCACHE[name].push({ sub: sub, desc: desc });
+
+    // Select the new component and trigger sub-component load
+    document.getElementById('componentSelect').value = name;
+    loadSubComponents();
+    document.getElementById('customCompGroup').style.display = 'none';
+    document.getElementById('customCompName').value = '';
+    document.getElementById('customCompFirstSub').value = '';
+    document.getElementById('customCompDesc').value = '';
+    showUploadAlert('Naya component "' + name + '" add ho gaya!', 'success');
+  });
+}
+
+// ── Save new sub-component → Sheet + reload ───────────────────
+function saveCustomSubComponent() {
+  var comp = document.getElementById('componentSelect').value;
+  var sub  = (document.getElementById('customSubName').value || '').trim();
+  var desc = (document.getElementById('customSubDesc').value || '').trim();
+  if (!comp) { alert('Pehle component select karo.'); return; }
+  if (!sub)  { alert('Sub-component name zaroori hai.'); return; }
+
+  var btn = document.querySelector('#customSubGroup .btn-outline');
+  btn.disabled = true; btn.textContent = 'Saving...';
+
+  api('addSubComponent', SESSION.token, comp, sub, desc).then(function(res) {
+    btn.disabled = false; btn.textContent = 'Save & Use';
+    if (!res.success) { alert(res.message || 'Error saving sub-component.'); return; }
+
+    // Clear localStorage dropdown cache
+    clearLocalDropdowns();
+
+    // Add to sub-component dropdown immediately
+    var subSel = document.getElementById('subComponentSelect');
+    if (subSel) {
+      var o = document.createElement('option');
+      o.value = sub; o.textContent = sub; o.dataset.desc = desc;
+      subSel.appendChild(o);
+      subSel.value = sub;
+      subSel.disabled = false;
+    }
+    // Update SUBCACHE
+    if (!SUBCACHE[comp]) SUBCACHE[comp] = [];
+    SUBCACHE[comp].push({ sub: sub, desc: desc });
+    if (desc) document.getElementById('descriptionInput').value = desc;
+
+    document.getElementById('customSubGroup').style.display = 'none';
+    document.getElementById('customSubName').value = '';
+    document.getElementById('customSubDesc').value = '';
+    showUploadAlert('Naya sub-component "' + sub + '" add ho gaya!', 'success');
+  });
+}
+
 function handleFileSelect(input) { if (input.files[0]) setFile(input.files[0]); }
 function handleDrop(e) {
   e.preventDefault();
