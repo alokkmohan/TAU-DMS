@@ -291,6 +291,41 @@
     .login-msg.info    { background: #e0e7ff; color: #3730a3; border: 1px solid #a5b4fc; }
 
     /* ═══════════════════════════════════════════
+       DOCUMENT VIEWER MODAL
+    ═══════════════════════════════════════════ */
+    #docViewerModal { align-items: flex-start; padding: 0; }
+    #docViewerModal.open { display: flex; }
+    .doc-viewer-box {
+      background: #fff;
+      width: 100vw; height: 100vh;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .doc-viewer-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px;
+      background: #1e293b; color: #fff;
+      min-height: 52px; flex-shrink: 0;
+    }
+    .doc-viewer-title {
+      font-size: 0.95rem; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-width: calc(100% - 160px); color: #e2e8f0;
+    }
+    .doc-viewer-close {
+      background: none; border: none; color: #94a3b8;
+      font-size: 1.8rem; cursor: pointer; line-height: 1;
+      padding: 0 4px; transition: color .15s;
+    }
+    .doc-viewer-close:hover { color: #fff; }
+    .doc-viewer-body {
+      flex: 1; overflow: hidden; background: #f1f5f9;
+    }
+    .doc-viewer-body iframe {
+      width: 100%; height: 100%; border: none; display: block;
+    }
+
+    /* ═══════════════════════════════════════════
        STATS BAR (legacy — kept for compat)
     ═══════════════════════════════════════════ */
     .stats-bar { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -764,6 +799,24 @@
   </div>
 </div>
 
+
+<!-- ══════════ DOCUMENT VIEWER MODAL ══════════ -->
+<div class="modal-overlay" id="docViewerModal" onclick="closeDocViewer(event)">
+  <div class="doc-viewer-box" onclick="event.stopPropagation()">
+    <div class="doc-viewer-header">
+      <div class="doc-viewer-title" id="docViewerTitle">Document Preview</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <a id="docViewerDownload" href="#" target="_blank" class="btn btn-primary btn-sm" style="font-size:0.82rem">
+          <i class="fa-solid fa-download"></i> Download
+        </a>
+        <button onclick="closeDocViewer()" class="doc-viewer-close" title="Close">&times;</button>
+      </div>
+    </div>
+    <div class="doc-viewer-body">
+      <iframe id="docViewerFrame" src="" allowfullscreen></iframe>
+    </div>
+  </div>
+</div>
 
 <!-- ====== IMAGE UPLOAD SUCCESS MODAL ====== -->
 <div class="modal-overlay" id="imageSuccessModal">
@@ -1317,8 +1370,8 @@ function renderHomeDocs(append) {
       (d.component && d.subject ? '<span style="color:#94a3b8"> : </span>' : '') +
       '<span style="color:#1e293b;font-weight:600">' + (d.subject || '—') + '</span>';
     var dl = d.drive_link
-      ? (ext ? '<span style="color:#dc2626;font-weight:700">' + ext + '</span><span style="color:#94a3b8"> : </span>' : '') +
-        '<a href="' + toDownloadUrl(d.drive_link) + '" target="_blank" style="color:#1565c0;font-weight:600;text-decoration:none">Download</a>'
+      ? (ext ? '<span style="color:#dc2626;font-weight:700">' + ext + '</span> ' : '') +
+        '<button onclick="openDocViewer(' + JSON.stringify(d.drive_link) + ',' + JSON.stringify(d.subject||d.file_name||'') + ',' + JSON.stringify(d.file_name||'') + ')" class="btn btn-primary btn-sm" style="font-size:0.78rem;padding:3px 9px"><i class="fa-solid fa-eye"></i> View</button>'
       : '—';
     var row = document.createElement('tr');
     var monthAbbr = (d.month || '').slice(0,3);
@@ -1718,7 +1771,8 @@ function renderDocsTable(tbodyId, rows, showUploader) {
     var actionCell =
       fileTypeBadge(r.file_name) +
       '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">' +
-        '<a href="' + toDownloadUrl(r.drive_link) + '" target="_blank" class="btn btn-primary btn-sm"><i class="fa-solid fa-download"></i> Download</a>' +
+        (r.drive_link ? '<button onclick="openDocViewer(' + JSON.stringify(r.drive_link) + ',' + JSON.stringify(r.subject||r.file_name||'') + ',' + JSON.stringify(r.file_name||'') + ')" class="btn btn-primary btn-sm"><i class="fa-solid fa-eye"></i> View</button>' : '') +
+        (r.drive_link ? '<a href="' + toDownloadUrl(r.drive_link) + '" target="_blank" class="btn btn-outline btn-sm"><i class="fa-solid fa-download"></i> Download</a>' : '') +
         verifyBtns +
       '</div>';
     var dateCell = showUploader ? (r.month + ' ' + r.year) : (r.month + '<br><small style="color:#94a3b8">' + r.year + '</small>');
@@ -1739,6 +1793,30 @@ function toDownloadUrl(url) {
   var match = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
   if (match) return 'https://drive.google.com/uc?export=download&id=' + match[1];
   return url;
+}
+
+function toPreviewUrl(url) {
+  if (!url) return '';
+  var match = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+  if (match) return 'https://drive.google.com/file/d/' + match[1] + '/preview';
+  return url;
+}
+
+function openDocViewer(driveLink, title, fileName) {
+  var previewUrl  = toPreviewUrl(driveLink);
+  var downloadUrl = toDownloadUrl(driveLink);
+  document.getElementById('docViewerTitle').textContent    = title || fileName || 'Document Preview';
+  document.getElementById('docViewerFrame').src            = previewUrl;
+  document.getElementById('docViewerDownload').href        = downloadUrl;
+  document.getElementById('docViewerModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDocViewer(e) {
+  if (e && e.target !== document.getElementById('docViewerModal')) return;
+  document.getElementById('docViewerModal').classList.remove('open');
+  document.getElementById('docViewerFrame').src = '';
+  document.body.style.overflow = '';
 }
 
 function statusBadge(s) {
@@ -1791,7 +1869,10 @@ function loadVerify() {
         btns = '<button class="btn btn-success btn-sm vfy-btn" data-id="' + r.doc_id + '" data-action="approve"><i class="fa-solid fa-circle-check"></i> Approve</button> ' +
                '<button class="btn btn-danger btn-sm vfy-btn" data-id="' + r.doc_id + '" data-action="reject-approval"><i class="fa-solid fa-circle-xmark"></i> Reject</button>';
       }
-      var actionCell = fileTypeBadge(r.file_name) + '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px"><a href="' + toDownloadUrl(r.drive_link) + '" target="_blank" class="btn btn-primary btn-sm"><i class="fa-solid fa-download"></i> Download</a>' + btns + '</div>';
+      var actionCell = fileTypeBadge(r.file_name) + '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">' +
+        (r.drive_link ? '<button onclick="openDocViewer(' + JSON.stringify(r.drive_link) + ',' + JSON.stringify(r.subject||r.file_name||'') + ',' + JSON.stringify(r.file_name||'') + ')" class="btn btn-primary btn-sm"><i class="fa-solid fa-eye"></i> View</button>' : '') +
+        (r.drive_link ? '<a href="' + toDownloadUrl(r.drive_link) + '" target="_blank" class="btn btn-outline btn-sm"><i class="fa-solid fa-download"></i></a>' : '') +
+        btns + '</div>';
       return '<tr><td style="width:32px;color:#94a3b8;font-size:0.82rem">' + (i+1) + '</td><td style="font-weight:600;color:#334155">' + (r.uploader_name||'') + '</td><td>' + docCell + '</td><td style="white-space:nowrap">' + r.month + '<br><small style="color:#94a3b8">' + r.year + '</small></td><td>' + statusBadge(r.status) + '</td><td style="min-width:160px">' + actionCell + '</td></tr>';
     }).join('');
     // ── Single event listener on tbody — handles all buttons ──
@@ -1871,8 +1952,8 @@ function renderCirculars(rows) {
       : (r.uploaded_at || '');
     var ext = r.file_name ? (r.file_name.split('.').pop() || '').toUpperCase() : '';
     var dl  = r.drive_link
-      ? (ext ? '<span style="color:#dc2626;font-weight:700">' + ext + '</span><span style="color:#94a3b8"> : </span>' : '')
-        + '<a href="' + toDownloadUrl(r.drive_link) + '" target="_blank" style="color:#1565c0;font-weight:600;text-decoration:none">Download</a>'
+      ? (ext ? '<span style="color:#dc2626;font-weight:700">' + ext + '</span> ' : '')
+        + '<button onclick="openDocViewer(' + JSON.stringify(r.drive_link) + ',' + JSON.stringify(r.title||r.file_name||'') + ',' + JSON.stringify(r.file_name||'') + ')" class="btn btn-primary btn-sm" style="font-size:0.78rem;padding:3px 9px"><i class="fa-solid fa-eye"></i> View</button>'
       : '&#x2014;';
     var docCell = '<span style="font-weight:600;color:#1e293b">' + (r.title || '&#x2014;') + '</span>';
     if (r.ref_number) docCell += '<br><span style="font-size:.78rem;color:#94a3b8">Ref: ' + r.ref_number + '</span>';
