@@ -3,8 +3,8 @@ function verifyDocument(token, docId) {
   try {
     const session = requireAuth(token);
     requireRole(session, [
-      CONFIG.ROLES.TEAM_LEAD, CONFIG.ROLES.STATE_LEAD,
-      CONFIG.ROLES.PROJECT_MANAGER, CONFIG.ROLES.CEO, CONFIG.ROLES.SUPER_ADMIN
+      CONFIG.ROLES.TEAM_LEAD, CONFIG.ROLES.SUPER_ADMIN
+      // it_admin → auto-maps to super_admin via requireRole normalization
     ]);
 
     const rowNum = findRowIndex(CONFIG.TABS.DOCUMENTS, 'doc_id', docId);
@@ -36,8 +36,8 @@ function rejectDocument(token, docId, remark) {
   try {
     const session = requireAuth(token);
     requireRole(session, [
-      CONFIG.ROLES.TEAM_LEAD, CONFIG.ROLES.STATE_LEAD,
-      CONFIG.ROLES.PROJECT_MANAGER, CONFIG.ROLES.CEO, CONFIG.ROLES.SUPER_ADMIN
+      CONFIG.ROLES.TEAM_LEAD, CONFIG.ROLES.SUPER_ADMIN
+      // it_admin → auto-maps to super_admin via requireRole normalization
     ]);
 
     if (!remark || !remark.trim()) return errorResponse('Rejection reason is required.');

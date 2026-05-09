@@ -1019,18 +1019,19 @@ document.addEventListener('keydown', function(e) {
 //  SIDEBAR
 // ════════════════════════════════════════════════
 function buildSidebar() {
-  var role     = (SESSION.role || '').toLowerCase();
-  var isTLPlus = ['team_lead','super_admin','it_admin','state_lead','project_manager','ceo'].includes(role);
+  var role      = (SESSION.role || '').toLowerCase();
+  // Sirf TL aur IT Admin verify kar sakte hain
+  var canVerify = ['team_lead','it_admin'].includes(role);
+  // State lead, PM, CEO sab docs dekh sakte hain lekin verify nahi
+  var canSeeAll = ['team_lead','it_admin','state_lead','project_manager','ceo'].includes(role);
 
   var items = [
     { id: 'home',      icon: 'fa-house',           label: 'Home' },
     { id: 'upload',    icon: 'fa-cloud-arrow-up',   label: 'Upload Document' },
     { id: 'mydocs',    icon: 'fa-folder-open',      label: 'My Documents' }
   ];
-  if (isTLPlus) {
-    items.push({ id: 'verify',  icon: 'fa-circle-check', label: 'Verify Documents' });
-    items.push({ id: 'alldocs', icon: 'fa-list',         label: 'All Documents' });
-  }
+  if (canVerify) items.push({ id: 'verify',  icon: 'fa-circle-check', label: 'Verify Documents' });
+  if (canSeeAll) items.push({ id: 'alldocs', icon: 'fa-list',         label: 'All Documents' });
   items.push({ id: 'circulars', icon: 'fa-bullhorn',     label: 'Circulars' });
   items.push({ id: 'images',    icon: 'fa-images',       label: 'Upload Images' });
   items.push({ id: 'gallery',   icon: 'fa-photo-film',   label: 'Image Gallery' });
@@ -1145,7 +1146,7 @@ function loadHome() {
 
     HOME_ALL_DOCS = docs;
 
-    var isTLPlus = ['team_lead','super_admin','it_admin','state_lead','project_manager','ceo'].includes((SESSION.role||'').toLowerCase());
+    var isTLPlus = ['team_lead','it_admin'].includes((SESSION.role||'').toLowerCase()); // sirf jo verify kar sakte hain
     var cards = [
       { key: 'components', label: 'Total Components', value: components.length,    color: '#4527a0', bg: '#ede7f6', filter: null },
       { key: 'all',        label: 'Total Documents',  value: publishedDocs.length, color: '#1a237e', bg: '#e8eaf6', filter: 'all'  },
@@ -1666,7 +1667,7 @@ function renderDocsTable(tbodyId, rows, showUploader) {
     tbody.innerHTML = '<tr><td colspan="6" class="no-data">No documents found.</td></tr>'; return;
   }
   tbody.innerHTML = rows.map(function(r, i) {
-    var canVerify = ['team_lead','super_admin','it_admin','state_lead','project_manager','ceo'].includes((SESSION.role||'').toLowerCase()) && r.status === 'pending';
+    var canVerify = ['team_lead','it_admin'].includes((SESSION.role||'').toLowerCase()) && r.status === 'pending';
     var verifyBtns = canVerify
       ? '<button class="btn btn-success btn-sm" onclick="verifyDoc(\'' + r.doc_id + '\')"><i class="fa-solid fa-circle-check"></i> Verify</button> ' +
         '<button class="btn btn-danger btn-sm" onclick="openRejectModal(\'' + r.doc_id + '\')"><i class="fa-solid fa-circle-xmark"></i> Reject</button>'
