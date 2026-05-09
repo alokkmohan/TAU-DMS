@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -7,7 +7,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document Management System</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; color: #212121; }
 
@@ -522,10 +521,10 @@
           </div>
           <div class="form-group">
             <label>Select Images <span style="color:#c62828">*</span></label>
-            <div id="imgFileDrop" onclick="document.getElementById(&apos;imageFileInput&apos;).click()"
-                 ondragover="event.preventDefault();this.style.borderColor=&apos;#6366f1&apos;"
-                 ondragleave="this.style.borderColor=&apos;&apos;"
-                 ondrop="event.preventDefault();this.style.borderColor=&apos;&apos;;handleImageDrop(event)"
+            <div id="imgFileDrop" onclick="document.getElementById('imageFileInput').click()"
+                 ondragover="event.preventDefault();this.style.borderColor='#6366f1'"
+                 ondragleave="this.style.borderColor=''"
+                 ondrop="event.preventDefault();this.style.borderColor='';handleImageDrop(event)"
                  style="border:2px dashed #cbd5e1;border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:border-color .2s">
               <i class="fa-solid fa-images" style="font-size:2rem;color:#94a3b8;margin-bottom:8px;display:block"></i>
               <p style="margin:0;font-weight:500;color:#475569">Click to browse or drag and drop images here</p>
@@ -818,12 +817,10 @@ function api(action) {
 // ════════════════════════════════════════════════
 var SESSION = { token: null, role: null, name: null, email: null, component: '' };
 
-// ── Dropdowns: served from /dropdowns.json (Git) ─────────────
-// localStorage cache — 1h TTL (re-fetches if Git file was updated)
+// -- Dropdowns: served from /dropdowns.json (Git) --
 var DD_LS_KEY = 'dms_dd_v2';
 var DD_LS_TTL = 3600000; // 1 hour
 var DD_JSON_URL = '/dropdowns.json';
-
 function getLocalDropdowns() {
   try {
     var raw = localStorage.getItem(DD_LS_KEY);
@@ -842,14 +839,11 @@ function setLocalDropdowns(components, allComponents, subComponents) {
   } catch(e) {}
 }
 function clearLocalDropdowns() { try { localStorage.removeItem(DD_LS_KEY); } catch(e) {} }
-
-// ── Fetch dropdowns.json from GitHub Pages (no GAS needed) ────
 function fetchDropdownsFromGit() {
   return fetch(DD_JSON_URL + '?v=' + Date.now())
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      var components   = [];
-      var subComponents = [];
+      var components = []; var subComponents = [];
       (data.components || []).forEach(function(c) {
         components.push(c.component);
         (c.sub_components || []).forEach(function(s) {
@@ -860,9 +854,9 @@ function fetchDropdownsFromGit() {
     });
 }
 
-// ── In-memory data cache (avoids repeat API calls within session) ──
-var CACHE = { docs: null, docsAt: 0, TTL: 90000 }; // 90 sec TTL
-var GALLERY_CACHE = null; // gallery events cache (cleared on image upload)
+var CACHE        = { docs: null, docsAt: 0, TTL: 90000 };
+var GALLERY_CACHE = null; // cleared on image upload
+var SUBCACHE = {};
 
 function cachedGetDocuments() {
   if (CACHE.docs && (Date.now() - CACHE.docsAt) < CACHE.TTL) {
@@ -873,7 +867,6 @@ function cachedGetDocuments() {
     return res;
   });
 }
-
 function bustDocsCache() { CACHE.docs = null; CACHE.docsAt = 0; }
 
 function initApp() {
@@ -967,31 +960,6 @@ function showDashboard() {
     }
   });
 }
-
-var SUBCACHE = {}; // component → [{sub, desc}] for instant dropdown cascade
-
-// ════════════════════════════════════════════════
-//  LOGIN
-// ════════════════════════════════════════════════
-var currentEmail = '';
-
-function showLoginMsg(text, type) {
-  var el = document.getElementById('loginMsg');
-  el.textContent = text; el.className = type; el.style.display = 'block';
-}
-
-function setLoginLoading(btnId, loading, label) {
-  var btn = document.getElementById(btnId);
-  btn.disabled = loading;
-  btn.innerHTML = loading ? '<span class=\"spinner\"></span>Please wait...' : label;
-}
-
-function sendOTP() {
-  var email = document.getElementById('emailInput').value.trim().toLowerCase();
-  if (!email) { showLoginMsg('Please enter your email address.', 'error'); return; }
-  var validDomains = ['educategirls.ngo', 'up.egtau.org'];
-  if (!validDomains.some(function(d) { return email.endsWith('@' + d); })) {
-    showLoginMsg('Only @educategirls.ngo or @up.egtau.org email addresses are allowed.', 'error'); return;
   }
   setLoginLoading('sendOtpBtn', true, 'Send OTP');
   document.getElementById('loginMsg').style.display = 'none';
@@ -1051,22 +1019,32 @@ document.addEventListener('keydown', function(e) {
 //  SIDEBAR
 // ════════════════════════════════════════════════
 function buildSidebar() {
-  var items = [
-    { id: 'home',     icon: 'fa-house',          label: 'Home' },
-    { id: 'upload',   icon: 'fa-cloud-arrow-up',  label: 'Upload Document' },
-    { id: 'mydocs',   icon: 'fa-folder-open',     label: 'My Documents' }
-  ];
-  if (['team_lead','super_admin','state_lead','project_manager','ceo'].includes((SESSION.role||'').toLowerCase())) {
-    items.push({ id: 'verify',    icon: 'fa-circle-check',   label: 'Verify Documents' });
-  }
-  items.push({ id: 'circulars',   icon: 'fa-bullhorn',       label: 'Circulars' });
-  items.push({ id: 'images',     icon: 'fa-images',         label: 'Upload Images' });
-  items.push({ id: 'gallery',    icon: 'fa-photo-film',     label: 'Image Gallery' });
+  var role     = (SESSION.role || '').toLowerCase();
+  var isTLPlus = ['team_lead','super_admin','state_lead','project_manager','ceo'].includes(role);
 
-  document.getElementById('sidebar').innerHTML = items.map(function(item) {
-    return '<div class=\"nav-item\" id=\"nav-' + item.id + '\" onclick=\"showSection(' + "'" + item.id + "'" + ')\">' +
-           '<i class=\"fa-solid ' + item.icon + ' nav-icon\"></i> ' + item.label + '</div>';
+  var items = [
+    { id: 'home',      icon: 'fa-house',           label: 'Home' },
+    { id: 'upload',    icon: 'fa-cloud-arrow-up',   label: 'Upload Document' },
+    { id: 'mydocs',    icon: 'fa-folder-open',      label: 'My Documents' }
+  ];
+  if (isTLPlus) {
+    items.push({ id: 'verify',  icon: 'fa-circle-check', label: 'Verify Documents' });
+    items.push({ id: 'alldocs', icon: 'fa-list',         label: 'All Documents' });
+  }
+  items.push({ id: 'circulars', icon: 'fa-bullhorn',     label: 'Circulars' });
+  items.push({ id: 'images',    icon: 'fa-images',       label: 'Upload Images' });
+  items.push({ id: 'gallery',   icon: 'fa-photo-film',   label: 'Image Gallery' });
+
+  var sidebar = document.getElementById('sidebar');
+  // Use data-sid + event delegation — avoids all quote-escaping issues
+  sidebar.innerHTML = items.map(function(item) {
+    return '<div class="nav-item" id="nav-' + item.id + '" data-sid="' + item.id + '">' +
+           '<i class="fa-solid ' + item.icon + ' nav-icon"></i> ' + item.label + '</div>';
   }).join('');
+  sidebar.onclick = function(e) {
+    var nav = e.target.closest('[data-sid]');
+    if (nav) showSection(nav.getAttribute('data-sid'));
+  };
 }
 
 function showSection(id) {
@@ -1090,32 +1068,24 @@ function showSection(id) {
 function refreshUploadDropdowns() {
   var sel = document.getElementById('componentSelect');
   if (!sel) return;
-
-  // Get component list from SUBCACHE (already in memory from init)
   var comps = Object.keys(SUBCACHE).sort();
-
-  // If SUBCACHE empty, fall back to unique components from loaded docs
   if (comps.length === 0 && HOME_ALL_DOCS.length > 0) {
     HOME_ALL_DOCS.forEach(function(d) {
       if (d.component && comps.indexOf(d.component) === -1) comps.push(d.component);
     });
     comps.sort();
   }
-
-  // If still empty, call GAS once
   if (comps.length === 0) {
     api('getComponents', SESSION.token).then(function(res) {
       if (!res.success || !res.data.length) return;
       res.data.forEach(function(c) {
         var exists = Array.from(sel.options).some(function(o){ return o.value === c; });
         if (!exists) { var o = document.createElement('option'); o.value = o.textContent = c; sel.appendChild(o); }
-        // Also add to SUBCACHE so sub-components work
         if (!SUBCACHE[c]) SUBCACHE[c] = [];
       });
     });
     return;
   }
-
   // For manager role: filter to only their assigned component(s) and hide Add Component link
   var addCompLink = document.getElementById('addNewCompLink');
   if (SESSION.role === 'manager') {
@@ -1128,10 +1098,8 @@ function refreshUploadDropdowns() {
     if (addCompLink) addCompLink.style.display = '';
   }
 
-  // Populate componentSelect (keep first placeholder option)
   while (sel.options.length > 1) sel.remove(1);
-  // Always add Circular as fixed first option
-  var cOpt = document.createElement('option'); cOpt.value = 'Circular'; cOpt.textContent = '\uD83D\uDCE2 Circular / Govt Order'; sel.appendChild(cOpt);
+  var cOpt = document.createElement('option'); cOpt.value = 'Circular'; cOpt.textContent = '📢 Circular / Govt Order'; sel.appendChild(cOpt);
   comps.forEach(function(c) {
     var o = document.createElement('option'); o.value = o.textContent = c; sel.appendChild(o);
   });
@@ -1144,7 +1112,8 @@ var HOME_ALL_DOCS       = [];
 var HOME_FILTERED_DOCS  = [];
 var HOME_PAGE           = 0;
 var HOME_PAGE_SIZE      = 20;
-var HOME_CARD_FILTER    = null; // null | 'all' | 'mine' | 'pending'
+var HOME_CARD_FILTER    = null;
+var HOME_STAT_CARDS     = [];
 
 function loadHome() {
   var statsEl = document.getElementById('homeStats');
@@ -1155,8 +1124,8 @@ function loadHome() {
   tbodyEl.innerHTML = '<tr><td colspan="6" class="no-data">Loading...</td></tr>';
 
   Promise.all([
-    cachedGetDocuments(),
-    CACHE.docs ? Promise.resolve({ success: true, data: Object.keys(SUBCACHE) }) : api('getAllComponents', SESSION.token)
+    api('getDocuments', SESSION.token, {}),
+    api('getAllComponents', SESSION.token)
   ]).then(function(results) {
     var docsRes  = results[0];
     var compsRes = results[1];
@@ -1164,52 +1133,49 @@ function loadHome() {
       tbodyEl.innerHTML = '<tr><td colspan="6" class="no-data">Could not load data.</td></tr>';
       return;
     }
-    var docs       = docsRes.data  || [];
-    // Count unique components from actual documents (more reliable than Dropdowns sheet)
+    var docs        = docsRes.data  || [];
+    // Count unique components from actual documents
     var uniqueComps = [];
     docs.forEach(function(d){ if (d.component && uniqueComps.indexOf(d.component) === -1) uniqueComps.push(d.component); });
     var compsFromDropdowns = compsRes.success ? (compsRes.data || []) : [];
-    // Use whichever count is higher — Dropdowns or actual docs
     var components = compsFromDropdowns.length >= uniqueComps.length ? compsFromDropdowns : uniqueComps;
-    var myDocs     = docs.filter(function(d){ return d.uploader_email === SESSION.email; });
-    var pendingDocs = docs.filter(function(d){ return d.status === 'pending'; });
+    var publishedDocs = docs.filter(function(d){ return d.status === 'tl_verified' || d.status === 'admin_approved'; });
+    var myDocs        = docs.filter(function(d){ return d.uploader_email === SESSION.email; });
+    var pendingDocs   = docs.filter(function(d){ return d.status === 'pending'; });
 
     HOME_ALL_DOCS = docs;
 
-    // ── Cards ──────────────────────────────────────────────────
+    var isTLPlus = ['team_lead','super_admin','state_lead','project_manager','ceo'].includes((SESSION.role||'').toLowerCase());
     var cards = [
-      { key: 'components', label: 'Total Components', value: components.length, color: '#4527a0', bg: '#ede7f6', filter: null },
-      { key: 'all',        label: 'Total Documents',  value: docs.length,       color: '#1a237e', bg: '#e8eaf6', filter: 'all'  },
-      { key: 'mine',       label: 'My Documents',     value: myDocs.length,     color: '#00695c', bg: '#e0f2f1', filter: 'mine' }
+      { key: 'components', label: 'Total Components', value: components.length,    color: '#4527a0', bg: '#ede7f6', filter: null },
+      { key: 'all',        label: 'Total Documents',  value: publishedDocs.length, color: '#1a237e', bg: '#e8eaf6', filter: 'all'  },
+      { key: 'mine',       label: 'My Documents',     value: myDocs.length,        color: '#00695c', bg: '#e0f2f1', filter: 'mine' }
     ];
-    // Extra card for team_lead
-    if (['team_lead','super_admin','state_lead','project_manager','ceo'].includes((SESSION.role||'').toLowerCase())) {
+    if (isTLPlus) {
       cards.push({ key: 'pending', label: 'Pending Approval', value: pendingDocs.length, color: '#b71c1c', bg: '#ffebee', filter: 'pending' });
     }
 
     renderStatCards(cards);
 
-    // ── Populate year + component filters from actual docs ────
-    var yearSel = document.getElementById('homeFilterYear');
-    if (yearSel && yearSel.options.length === 1) {
-      var years = [...new Set(docs.map(function(d){ return d.year; }).filter(Boolean))].sort().reverse();
-      years.forEach(function(y) {
-        var o = document.createElement('option'); o.value = o.textContent = y; yearSel.appendChild(o);
-      });
-    }
-    var compSel = document.getElementById('homeFilterComponent');
-    if (compSel) {
-      // Always rebuild from actual docs (most reliable)
-      var existingVals = [];
-      for (var ci = 0; ci < compSel.options.length; ci++) existingVals.push(compSel.options[ci].value);
-      var docComps = [];
-      docs.forEach(function(d) { if (d.component && docComps.indexOf(d.component) === -1) docComps.push(d.component); });
-      docComps.sort().forEach(function(c) {
-        if (existingVals.indexOf(c) === -1) {
-          var o = document.createElement('option'); o.value = o.textContent = c; compSel.appendChild(o);
-        }
-      });
-    }
+     var yearSel = document.getElementById('homeFilterYear');
+     if (yearSel && yearSel.options.length === 1) {
+       var years = [...new Set(docs.map(function(d){ return d.year; }).filter(Boolean))].sort().reverse();
+       years.forEach(function(y) {
+         var o = document.createElement('option'); o.value = o.textContent = y; yearSel.appendChild(o);
+       });
+     }
+     var compSel = document.getElementById('homeFilterComponent');
+     if (compSel) {
+       var existingVals = [];
+       for (var ci = 0; ci < compSel.options.length; ci++) existingVals.push(compSel.options[ci].value);
+       var docComps = [];
+       docs.forEach(function(d) { if (d.component && docComps.indexOf(d.component) === -1) docComps.push(d.component); });
+       docComps.sort().forEach(function(c) {
+         if (existingVals.indexOf(c) === -1) {
+           var o = document.createElement('option'); o.value = o.textContent = c; compSel.appendChild(o);
+         }
+       });
+     }
 
     filterHomeDocs();
   }).catch(function() {
@@ -1219,6 +1185,7 @@ function loadHome() {
 
 function renderStatCards(cards) {
   var statsEl = document.getElementById('homeStats');
+  HOME_STAT_CARDS = cards;
   statsEl.innerHTML = cards.map(function(c) {
     var isClickable = c.filter !== null;
     var isActive    = HOME_CARD_FILTER === c.filter && isClickable;
@@ -1234,14 +1201,9 @@ function renderStatCards(cards) {
            (isClickable ? '<div style="font-size:0.7rem;color:' + c.color + ';margin-top:4px;opacity:0.7">' + (isActive ? '✔ Active filter' : 'Click to filter') + '</div>' : '') +
            '</div>';
   }).join('');
-  // store cards for re-render
-  HOME_STAT_CARDS = cards;
 }
 
-var HOME_STAT_CARDS = [];
-
 function applyCardFilter(filter) {
-  // Toggle — click again to clear
   HOME_CARD_FILTER = (HOME_CARD_FILTER === filter) ? null : filter;
   renderStatCards(HOME_STAT_CARDS);
   filterHomeDocs();
@@ -1254,10 +1216,19 @@ function filterHomeDocs() {
   var q     = ((document.getElementById('homeFilterSearch')   || {}).value || '').toLowerCase().trim();
 
   HOME_FILTERED_DOCS = HOME_ALL_DOCS.filter(function(d) {
-    // Card filter
-    if (HOME_CARD_FILTER === 'mine'    && d.uploader_email !== SESSION.email) return false;
-    if (HOME_CARD_FILTER === 'pending' && d.status !== 'pending')             return false;
-    // Dropdown / text filters (String() handles number vs string mismatch from Sheets)
+    // Visibility rules:
+    //  'pending' card → show only pending docs (TL+ can review)
+    //  'mine'    card → show all own docs (any status, incl. pending)
+    //  default / 'all' → show only published (tl_verified or admin_approved)
+    if (HOME_CARD_FILTER === 'pending') {
+      if (d.status !== 'pending') return false;
+    } else if (HOME_CARD_FILTER === 'mine') {
+      if (d.uploader_email !== SESSION.email) return false;
+      // own docs: all statuses visible here
+    } else {
+      // Default view: only published documents
+      if (d.status !== 'tl_verified' && d.status !== 'admin_approved') return false;
+    }
     if (year  && String(d.year)      !== String(year))  return false;
     if (month && String(d.month)     !== String(month)) return false;
     if (comp  && String(d.component) !== String(comp))  return false;
@@ -1306,8 +1277,7 @@ function renderHomeDocs(append) {
 
   slice.forEach(function(d, i) {
     var num = start + i + 1;
-
-    // Component + sub-component badges
+    var ext = d.file_name ? (d.file_name.split('.').pop() || '').toUpperCase() : '';
     var ext = d.file_name ? (d.file_name.split('.').pop() || '').toUpperCase() : '';
     var docCell = '<span style="color:#1d4ed8;font-weight:700">' + (d.component || '') + '</span>' +
       (d.component && d.subject ? '<span style="color:#94a3b8"> : </span>' : '') +
@@ -1316,7 +1286,6 @@ function renderHomeDocs(append) {
       ? (ext ? '<span style="color:#dc2626;font-weight:700">' + ext + '</span><span style="color:#94a3b8"> : </span>' : '') +
         '<a href="' + toDownloadUrl(d.drive_link) + '" target="_blank" style="color:#1565c0;font-weight:600;text-decoration:none">Download</a>'
       : '—';
-
     var row = document.createElement('tr');
     var monthAbbr = (d.month || '').slice(0,3);
     var yearShort  = String(d.year || '').slice(-2);
@@ -1435,12 +1404,8 @@ function fillDescription() {
   if (opt && opt.dataset.desc) document.getElementById('descriptionInput').value = opt.dataset.desc;
 }
 
-// ── Toggle custom component / sub-component input panels ──────
-function toggleCustomComp(e) {
-  e.preventDefault();
-  var g = document.getElementById('customCompGroup');
-  g.style.display = g.style.display === 'none' ? 'block' : 'none';
-}
+// -- Toggle custom component/sub-component panels --
+function toggleCustomComp(e) { e.preventDefault(); var g=document.getElementById('customCompGroup'); g.style.display=g.style.display==='none'?'block':'none'; }
 function toggleCustomSub(e) {
   e.preventDefault();
   var comp = document.getElementById('componentSelect').value;
@@ -1454,80 +1419,57 @@ function toggleCustomSub(e) {
   g.style.display = g.style.display === 'none' ? 'block' : 'none';
 }
 
-// ── Save new component → Sheet + reload dropdowns ─────────────
+// -- Save new component -> Sheet + clear dropdown cache --
 function saveCustomComponent() {
-  var name = (document.getElementById('customCompName').value || '').trim();
-  var sub  = (document.getElementById('customCompFirstSub').value || '').trim();
-  var desc = (document.getElementById('customCompDesc').value || '').trim();
-  if (!name || !sub) { alert('Component name and first sub-component are required.'); return; }
-
-  var btn = document.querySelector('#customCompGroup .btn-outline');
-  btn.disabled = true; btn.textContent = 'Saving...';
-
-  api('addComponent', SESSION.token, name, sub, desc).then(function(res) {
-    btn.disabled = false; btn.textContent = 'Save & Use';
-    if (!res.success) { alert(res.message || 'Error saving component.'); return; }
-
-    // Clear localStorage dropdown cache — next load will fetch fresh from Sheet
+  var name=(document.getElementById('customCompName').value||'').trim();
+  var sub=(document.getElementById('customCompFirstSub').value||'').trim();
+  var desc=(document.getElementById('customCompDesc').value||'').trim();
+  if (!name||!sub){alert('Component name and first sub-component are required.');return;}
+  var btn=document.querySelector('#customCompGroup .btn-outline');
+  btn.disabled=true; btn.textContent='Saving...';
+  api('addComponent',SESSION.token,name,sub,desc).then(function(res){
+    btn.disabled=false; btn.textContent='Save & Use';
+    if(!res.success){alert(res.message||'Error saving component.');return;}
     clearLocalDropdowns();
-
-    // Add to dropdown immediately (no page reload needed)
-    ['componentSelect', 'filterComponent', 'allFilterComponent', 'homeFilterComponent'].forEach(function(id) {
-      var sel = document.getElementById(id); if (!sel) return;
-      var exists = Array.from(sel.options).some(function(o){ return o.value === name; });
-      if (!exists) { var o = document.createElement('option'); o.value = o.textContent = name; sel.appendChild(o); }
+    ['componentSelect','filterComponent','allFilterComponent','homeFilterComponent'].forEach(function(id){
+      var sel=document.getElementById(id); if(!sel)return;
+      var exists=Array.from(sel.options).some(function(o){return o.value===name;});
+      if(!exists){var o=document.createElement('option');o.value=o.textContent=name;sel.appendChild(o);}
     });
-    // Also update SUBCACHE
-    if (!SUBCACHE[name]) SUBCACHE[name] = [];
-    SUBCACHE[name].push({ sub: sub, desc: desc });
-
-    // Select the new component and trigger sub-component load
-    document.getElementById('componentSelect').value = name;
+    if(!SUBCACHE[name])SUBCACHE[name]=[];
+    SUBCACHE[name].push({sub:sub,desc:desc});
+    document.getElementById('componentSelect').value=name;
     loadSubComponents();
-    document.getElementById('customCompGroup').style.display = 'none';
-    document.getElementById('customCompName').value = '';
-    document.getElementById('customCompFirstSub').value = '';
-    document.getElementById('customCompDesc').value = '';
-    showUploadAlert('Component "' + name + '" added successfully!', 'success');
+    document.getElementById('customCompGroup').style.display='none';
+    document.getElementById('customCompName').value='';
+    document.getElementById('customCompFirstSub').value='';
+    document.getElementById('customCompDesc').value='';
+    showUploadAlert('Component added successfully!','success');
   });
 }
 
-// ── Save new sub-component → Sheet + reload ───────────────────
+// -- Save new sub-component -> Sheet + clear dropdown cache --
 function saveCustomSubComponent() {
-  var comp = document.getElementById('componentSelect').value;
-  var sub  = (document.getElementById('customSubName').value || '').trim();
-  var desc = (document.getElementById('customSubDesc').value || '').trim();
-  if (!comp) { alert('Please select a component first.'); return; }
-  if (!sub)  { alert('Sub-component name is required.'); return; }
-
-  var btn = document.querySelector('#customSubGroup .btn-outline');
-  btn.disabled = true; btn.textContent = 'Saving...';
-
-  api('addSubComponent', SESSION.token, comp, sub, desc).then(function(res) {
-    btn.disabled = false; btn.textContent = 'Save & Use';
-    if (!res.success) { alert(res.message || 'Error saving sub-component.'); return; }
-
-    // Clear localStorage dropdown cache
+  var comp=document.getElementById('componentSelect').value;
+  var sub=(document.getElementById('customSubName').value||'').trim();
+  var desc=(document.getElementById('customSubDesc').value||'').trim();
+  if(!comp){alert('Please select a component first.');return;}
+  if(!sub){alert('Sub-component name is required.');return;}
+  var btn=document.querySelector('#customSubGroup .btn-outline');
+  btn.disabled=true; btn.textContent='Saving...';
+  api('addSubComponent',SESSION.token,comp,sub,desc).then(function(res){
+    btn.disabled=false; btn.textContent='Save & Use';
+    if(!res.success){alert(res.message||'Error.');return;}
     clearLocalDropdowns();
-
-    // Add to sub-component dropdown immediately
-    var subSel = document.getElementById('subComponentSelect');
-    if (subSel) {
-      var o = document.createElement('option');
-      o.value = sub; o.textContent = sub; o.dataset.desc = desc;
-      subSel.appendChild(o);
-      subSel.value = sub;
-      subSel.disabled = false;
-    }
-    // Update SUBCACHE
-    if (!SUBCACHE[comp]) SUBCACHE[comp] = [];
-    SUBCACHE[comp].push({ sub: sub, desc: desc });
-    if (desc) document.getElementById('descriptionInput').value = desc;
-
-    document.getElementById('customSubGroup').style.display = 'none';
-    document.getElementById('customSubName').value = '';
-    document.getElementById('customSubDesc').value = '';
-    showUploadAlert('Sub-component "' + sub + '" added successfully!', 'success');
+    var subSel=document.getElementById('subComponentSelect');
+    if(subSel){var o=document.createElement('option');o.value=sub;o.textContent=sub;o.dataset.desc=desc;subSel.appendChild(o);subSel.value=sub;subSel.disabled=false;}
+    if(!SUBCACHE[comp])SUBCACHE[comp]=[];
+    SUBCACHE[comp].push({sub:sub,desc:desc});
+    if(desc)document.getElementById('descriptionInput').value=desc;
+    document.getElementById('customSubGroup').style.display='none';
+    document.getElementById('customSubName').value='';
+    document.getElementById('customSubDesc').value='';
+    showUploadAlert('Sub-component added successfully!','success');
   });
 }
 
@@ -1539,7 +1481,7 @@ function handleDrop(e) {
 }
 function setFile(file) {
   if (file.size > 35 * 1024 * 1024) {
-    showUploadAlert('File size exceeds 35 MB. Please upload a smaller file.', 'error'); return;
+    showUploadAlert('File size exceeds 10MB. Please upload a smaller file.', 'error'); return;
   }
   selectedFile = file;
   var sizeMB = (file.size / (1024 * 1024)).toFixed(2);
@@ -1663,9 +1605,7 @@ function loadDocs() {
   document.getElementById('docsTableBody').innerHTML = '<tr><td colspan="8" class="no-data">Loading...</td></tr>';
   cachedGetDocuments().then(function(res) {
     if (!res.success) return;
-    var f = getFilters('filter');
-    var rows = clientFilter(res.data, f);
-    renderDocsTable('docsTableBody', rows, false);
+    renderDocsTable('docsTableBody', clientFilter(res.data, getFilters('filter')), false);
   });
 }
 
@@ -1673,9 +1613,7 @@ function loadAllDocs() {
   document.getElementById('allDocsTableBody').innerHTML = '<tr><td colspan="8" class="no-data">Loading...</td></tr>';
   cachedGetDocuments().then(function(res) {
     if (!res.success) return;
-    var f = getFilters('allFilter');
-    var rows = clientFilter(res.data, f);
-    renderDocsTable('allDocsTableBody', rows, true);
+    renderDocsTable('allDocsTableBody', clientFilter(res.data, getFilters('allFilter')), true);
   });
 }
 
@@ -1687,7 +1625,7 @@ function clientFilter(docs, f) {
     if (f.status    && d.status            !== f.status)            return false;
     if (f.search) {
       var q = f.search.toLowerCase();
-      if (!((d.subject||'').toLowerCase().includes(q) || (d.file_name||'').toLowerCase().includes(q))) return false;
+      if (!((d.subject||'').toLowerCase().includes(q)||(d.file_name||'').toLowerCase().includes(q))) return false;
     }
     return true;
   });
@@ -1828,10 +1766,10 @@ function loadVerify() {
       if (!btn) return;
       var id     = btn.dataset.id;
       var action = btn.dataset.action;
-      if (action === 'verify')         verifyDoc(id, true);
-      else if (action === 'approve')   approveDoc(id);
+      if (action === 'verify')              verifyDoc(id, true);
+      else if (action === 'approve')        approveDoc(id);
       else if (action === 'reject')         openRejectModal(id, false, true);
-      else if (action === 'reject-approval') openRejectModal(id, true,  true);
+      else if (action === 'reject-approval') openRejectModal(id, true, true);
     };
   });
 }
@@ -1964,7 +1902,7 @@ function logout() {
 // ================================================
 //  IMAGE UPLOAD
 // ================================================
-var IMG_FILES = [];   // array of File objects selected by user
+var IMG_FILES = [];
 
 function handleImageSelect(files) {
   IMG_FILES = Array.from(files);
@@ -2050,18 +1988,19 @@ function submitImageUpload() {
   var cur  = document.getElementById('imgCurrent');
   var tot  = document.getElementById('imgTotal');
 
-  btn.disabled  = true;
+  btn.disabled       = true;
   prog.style.display = 'block';
   tot.textContent    = IMG_FILES.length;
   cur.textContent    = '0';
   bar.style.width    = '0%';
 
-  var done = 0;
-  var errors = [];
+  var done      = 0;
+  var errors    = [];
+  var lastError = '';
 
   function uploadNext(idx) {
     if (idx >= IMG_FILES.length) {
-      btn.disabled = false;
+      btn.disabled       = false;
       prog.style.display = 'none';
       if (errors.length === IMG_FILES.length) {
         imgAlert('Upload failed — GAS error: "' + lastError + '". Files: ' + errors.join(', '), 'error');
@@ -2077,14 +2016,14 @@ function submitImageUpload() {
       }
       return;
     }
-    var file = IMG_FILES[idx];
+    var file   = IMG_FILES[idx];
     var reader = new FileReader();
     reader.onload = function(e) {
       var b64 = e.target.result.split(',')[1];
       api('uploadSingleImage', SESSION.token, {
-        eventName: eventName,
-        fileName:  file.name,
-        mimeType:  file.type || 'image/jpeg',
+        eventName:  eventName,
+        fileName:   file.name,
+        mimeType:   file.type || 'image/jpeg',
         fileBase64: b64
       }).then(function(res) {
         done++;
@@ -2179,3 +2118,8 @@ initApp();
 </script>
 </body>
 </html>
+
+
+
+
+

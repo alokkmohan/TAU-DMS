@@ -1019,22 +1019,32 @@ document.addEventListener('keydown', function(e) {
 //  SIDEBAR
 // ════════════════════════════════════════════════
 function buildSidebar() {
-  var items = [
-    { id: 'home',     icon: 'fa-house',          label: 'Home' },
-    { id: 'upload',   icon: 'fa-cloud-arrow-up',  label: 'Upload Document' },
-    { id: 'mydocs',   icon: 'fa-folder-open',     label: 'My Documents' }
-  ];
-  if (['team_lead','super_admin','state_lead','project_manager','ceo'].includes((SESSION.role||'').toLowerCase())) {
-    items.push({ id: 'verify',    icon: 'fa-circle-check',   label: 'Verify Documents' });
-  }
-  items.push({ id: 'circulars',   icon: 'fa-bullhorn',       label: 'Circulars' });
-  items.push({ id: 'images',     icon: 'fa-images',         label: 'Upload Images' });
-  items.push({ id: 'gallery',    icon: 'fa-photo-film',     label: 'Image Gallery' });
+  var role     = (SESSION.role || '').toLowerCase();
+  var isTLPlus = ['team_lead','super_admin','state_lead','project_manager','ceo'].includes(role);
 
-  document.getElementById('sidebar').innerHTML = items.map(function(item) {
-    return '<div class="nav-item" id="nav-' + item.id + '" onclick="showSection(\''' + item.id + '\')">' +
+  var items = [
+    { id: 'home',      icon: 'fa-house',           label: 'Home' },
+    { id: 'upload',    icon: 'fa-cloud-arrow-up',   label: 'Upload Document' },
+    { id: 'mydocs',    icon: 'fa-folder-open',      label: 'My Documents' }
+  ];
+  if (isTLPlus) {
+    items.push({ id: 'verify',  icon: 'fa-circle-check', label: 'Verify Documents' });
+    items.push({ id: 'alldocs', icon: 'fa-list',         label: 'All Documents' });
+  }
+  items.push({ id: 'circulars', icon: 'fa-bullhorn',     label: 'Circulars' });
+  items.push({ id: 'images',    icon: 'fa-images',       label: 'Upload Images' });
+  items.push({ id: 'gallery',   icon: 'fa-photo-film',   label: 'Image Gallery' });
+
+  var sidebar = document.getElementById('sidebar');
+  // Use data-sid + event delegation — avoids all quote-escaping issues
+  sidebar.innerHTML = items.map(function(item) {
+    return '<div class="nav-item" id="nav-' + item.id + '" data-sid="' + item.id + '">' +
            '<i class="fa-solid ' + item.icon + ' nav-icon"></i> ' + item.label + '</div>';
   }).join('');
+  sidebar.onclick = function(e) {
+    var nav = e.target.closest('[data-sid]');
+    if (nav) showSection(nav.getAttribute('data-sid'));
+  };
 }
 
 function showSection(id) {
@@ -1129,17 +1139,19 @@ function loadHome() {
     docs.forEach(function(d){ if (d.component && uniqueComps.indexOf(d.component) === -1) uniqueComps.push(d.component); });
     var compsFromDropdowns = compsRes.success ? (compsRes.data || []) : [];
     var components = compsFromDropdowns.length >= uniqueComps.length ? compsFromDropdowns : uniqueComps;
-    var myDocs      = docs.filter(function(d){ return d.uploader_email === SESSION.email; });
-    var pendingDocs = docs.filter(function(d){ return d.status === 'pending'; });
+    var publishedDocs = docs.filter(function(d){ return d.status === 'tl_verified' || d.status === 'admin_approved'; });
+    var myDocs        = docs.filter(function(d){ return d.uploader_email === SESSION.email; });
+    var pendingDocs   = docs.filter(function(d){ return d.status === 'pending'; });
 
     HOME_ALL_DOCS = docs;
 
+    var isTLPlus = ['team_lead','super_admin','state_lead','project_manager','ceo'].includes((SESSION.role||'').toLowerCase());
     var cards = [
-      { key: 'components', label: 'Total Components', value: components.length, color: '#4527a0', bg: '#ede7f6', filter: null },
-      { key: 'all',        label: 'Total Documents',  value: docs.length,       color: '#1a237e', bg: '#e8eaf6', filter: 'all'  },
-      { key: 'mine',       label: 'My Documents',     value: myDocs.length,     color: '#00695c', bg: '#e0f2f1', filter: 'mine' }
+      { key: 'components', label: 'Total Components', value: components.length,    color: '#4527a0', bg: '#ede7f6', filter: null },
+      { key: 'all',        label: 'Total Documents',  value: publishedDocs.length, color: '#1a237e', bg: '#e8eaf6', filter: 'all'  },
+      { key: 'mine',       label: 'My Documents',     value: myDocs.length,        color: '#00695c', bg: '#e0f2f1', filter: 'mine' }
     ];
-    if (['team_lead','super_admin','state_lead','project_manager','ceo'].includes((SESSION.role||'').toLowerCase())) {
+    if (isTLPlus) {
       cards.push({ key: 'pending', label: 'Pending Approval', value: pendingDocs.length, color: '#b71c1c', bg: '#ffebee', filter: 'pending' });
     }
 
@@ -1204,8 +1216,19 @@ function filterHomeDocs() {
   var q     = ((document.getElementById('homeFilterSearch')   || {}).value || '').toLowerCase().trim();
 
   HOME_FILTERED_DOCS = HOME_ALL_DOCS.filter(function(d) {
-    if (HOME_CARD_FILTER === 'mine'    && d.uploader_email !== SESSION.email) return false;
-    if (HOME_CARD_FILTER === 'pending' && d.status !== 'pending')             return false;
+    // Visibility rules:
+    //  'pending' card → show only pending docs (TL+ can review)
+    //  'mine'    card → show all own docs (any status, incl. pending)
+    //  default / 'all' → show only published (tl_verified or admin_approved)
+    if (HOME_CARD_FILTER === 'pending') {
+      if (d.status !== 'pending') return false;
+    } else if (HOME_CARD_FILTER === 'mine') {
+      if (d.uploader_email !== SESSION.email) return false;
+      // own docs: all statuses visible here
+    } else {
+      // Default view: only published documents
+      if (d.status !== 'tl_verified' && d.status !== 'admin_approved') return false;
+    }
     if (year  && String(d.year)      !== String(year))  return false;
     if (month && String(d.month)     !== String(month)) return false;
     if (comp  && String(d.component) !== String(comp))  return false;
