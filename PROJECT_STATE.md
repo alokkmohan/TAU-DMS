@@ -47,7 +47,7 @@ git push origin main
 
 **GAS_URL** (in index.html line ~707):
 ```
-https://script.google.com/macros/s/AKfycby48dm4ACr_muIhIxARpA1m7_P1gDPO4zC0TVDR5fi227tTzfTn2kxshxfE5YgZGXbREA/exec
+https://script.google.com/macros/s/AKfycbzlurGp4x4QFk5IsLQDXHEVBZLtchABe2O3DkBwi1QQgcKIL2IiTACMl-JauBOju2Em/exec
 ```
 > Update this URL whenever a **new versioned deployment** is made in GAS editor.
 
