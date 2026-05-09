@@ -432,7 +432,7 @@
               <button class="btn btn-outline btn-sm" style="align-self:center;white-space:nowrap" onclick="saveCustomComponent()">Save &amp; Use</button>
             </div>
           </div>
-          <div style="margin-bottom:4px">
+          <div id="addNewCompLink" style="margin-bottom:4px">
             <a href="#" style="font-size:0.82rem;color:#1565c0;text-decoration:none" onclick="toggleCustomComp(event)">
               ➕ Component not in list? Add new
             </a>
@@ -791,7 +791,7 @@ function api(action) {
 // ════════════════════════════════════════════════
 //  SESSION
 // ════════════════════════════════════════════════
-var SESSION = { token: null, role: null, name: null, email: null };
+var SESSION = { token: null, role: null, name: null, email: null, component: '' };
 
 // -- Dropdowns: served from /dropdowns.json (Git) --
 var DD_LS_KEY = 'dms_dd_v2';
@@ -849,8 +849,9 @@ function initApp() {
   var role  = sessionStorage.getItem('dms_role');
   var name  = sessionStorage.getItem('dms_name');
   var email = sessionStorage.getItem('dms_email');
+  var component = sessionStorage.getItem('dms_component') || '';
   if (token && role && name) {
-    SESSION = { token: token, role: role, name: name, email: email || '' };
+    SESSION = { token: token, role: role, name: name, email: email || '', component: component };
     showDashboard();
   } else {
     showLoginPage();
@@ -962,11 +963,12 @@ function verifyOTP() {
     .then(function(res) {
       setLoginLoading('verifyOtpBtn', false, 'Login');
       if (!res.success) { showLoginMsg(res.message, 'error'); return; }
-      sessionStorage.setItem('dms_token', res.data.token);
-      sessionStorage.setItem('dms_role',  res.data.role);
-      sessionStorage.setItem('dms_name',  res.data.name);
-      sessionStorage.setItem('dms_email', res.data.email || currentEmail);
-      SESSION = { token: res.data.token, role: res.data.role, name: res.data.name, email: res.data.email || currentEmail };
+      sessionStorage.setItem('dms_token',     res.data.token);
+      sessionStorage.setItem('dms_role',      res.data.role);
+      sessionStorage.setItem('dms_name',      res.data.name);
+      sessionStorage.setItem('dms_email',     res.data.email || currentEmail);
+      sessionStorage.setItem('dms_component', res.data.component || '');
+      SESSION = { token: res.data.token, role: res.data.role, name: res.data.name, email: res.data.email || currentEmail, component: res.data.component || '' };
       showDashboard();
     })
     .catch(function() {
@@ -1046,6 +1048,18 @@ function refreshUploadDropdowns() {
     });
     return;
   }
+  // For manager role: filter to only their assigned component(s) and hide Add Component link
+  var addCompLink = document.getElementById('addNewCompLink');
+  if (SESSION.role === 'manager') {
+    if (SESSION.component) {
+      var allowed = SESSION.component.split(',').map(function(c){ return c.trim().toLowerCase(); });
+      comps = comps.filter(function(c){ return allowed.indexOf(c.toLowerCase()) !== -1; });
+    }
+    if (addCompLink) addCompLink.style.display = 'none';
+  } else {
+    if (addCompLink) addCompLink.style.display = '';
+  }
+
   while (sel.options.length > 1) sel.remove(1);
   var cOpt = document.createElement('option'); cOpt.value = 'Circular'; cOpt.textContent = '📢 Circular / Govt Order'; sel.appendChild(cOpt);
   comps.forEach(function(c) {

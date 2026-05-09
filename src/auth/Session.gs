@@ -3,7 +3,7 @@
 const SESSION_PREFIX   = 'SESSION_';
 const SESSION_TTL_HOURS = 8;
 
-function _createSession(email, role, name, state, state_group) {
+function _createSession(email, role, name, state, state_group, component) {
   const token   = Utilities.getUuid();
   const payload = JSON.stringify({
     email:       email,
@@ -11,6 +11,7 @@ function _createSession(email, role, name, state, state_group) {
     name:        name,
     state:       state       || '',
     state_group: state_group || '',
+    component:   component   || '',
     createdAt:   new Date().getTime()
   });
   PropertiesService.getScriptProperties().setProperty(SESSION_PREFIX + token, payload);

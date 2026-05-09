@@ -133,7 +133,8 @@ function verifyOTP(email, enteredOTP) {
     const user        = getUserByEmail(email);
     const userState   = user.state       || '';
     const stateGroup  = user.state_group || getStateGroup(userState);
-    const token       = _createSession(email, user.role, user.name, userState, stateGroup);
+    const component   = user.component   || '';
+    const token       = _createSession(email, user.role, user.name, userState, stateGroup, component);
 
     writeAuditLog(email, user.name, 'LOGIN_SUCCESS', '', '');
 
@@ -143,7 +144,8 @@ function verifyOTP(email, enteredOTP) {
       role:        user.role,
       name:        user.name,
       state:       userState,
-      state_group: stateGroup
+      state_group: stateGroup,
+      component:   component
     });
 
   } catch (e) {
