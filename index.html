@@ -383,8 +383,8 @@
           </div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>#</th><th>Uploaded By</th><th>Document</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
-              <tbody id="homeDocsTbody"><tr><td colspan="6" class="no-data">Loading...</td></tr></tbody>
+              <thead><tr><th>#</th><th>Uploaded By</th><th>Document</th><th>Date</th><th>Action</th></tr></thead>
+              <tbody id="homeDocsTbody"><tr><td colspan="5" class="no-data">Loading...</td></tr></tbody>
             </table>
           </div>
           <div id="homeLoadMoreWrap" style="text-align:center;margin-top:14px;display:none">
@@ -1182,7 +1182,7 @@ function renderHomeDocs(append) {
 
   if (!append) {
     if (!HOME_FILTERED_DOCS.length) {
-      tbodyEl.innerHTML = '<tr><td colspan="6" class="no-data">No documents found.</td></tr>';
+      tbodyEl.innerHTML = '<tr><td colspan="5" class="no-data">No documents found.</td></tr>';
       if (moreWrap) moreWrap.style.display = 'none';
       return;
     }
@@ -1216,7 +1216,6 @@ function renderHomeDocs(append) {
       '<td style="font-weight:600;color:#334155;white-space:nowrap">' + (d.uploader_name || '—') + '</td>' +
       '<td>' + docCell + '</td>' +
       '<td style="white-space:nowrap;color:#475569">' + (d.month || '') + '<br><small style="color:#94a3b8">' + (d.year || '') + '</small></td>' +
-      '<td>' + statusBadge(d.status) + '</td>' +
       '<td style="min-width:130px">' + dl + '</td>';
     tbodyEl.appendChild(row);
   });
