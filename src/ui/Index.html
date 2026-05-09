@@ -932,9 +932,6 @@ function buildSidebar() {
   if (SESSION.role === 'team_lead' || SESSION.role === 'super_admin') {
     items.push({ id: 'verify',    icon: 'fa-circle-check',   label: 'Verify Documents' });
   }
-  if (SESSION.role === 'super_admin') {
-    items.push({ id: 'admin',     icon: 'fa-sliders',        label: 'Admin Panel' });
-  }
   items.push({ id: 'circulars',   icon: 'fa-bullhorn',       label: 'Circulars' });
 
   document.getElementById('sidebar').innerHTML = items.map(function(item) {
