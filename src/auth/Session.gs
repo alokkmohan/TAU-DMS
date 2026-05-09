@@ -7,7 +7,7 @@ function _createSession(email, role, name, state, state_group, component) {
   const token   = Utilities.getUuid();
   const payload = JSON.stringify({
     email:       email,
-    role:        role,
+    role:        (role || '').toLowerCase().trim(),   // always lowercase — sheet me capital ho to bhi kaam kare
     name:        name,
     state:       state       || '',
     state_group: state_group || '',
