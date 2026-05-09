@@ -1738,8 +1738,8 @@ function loadVerify() {
   cachedGetDocuments().then(function(res) {
     if (!res.success) { tbody.innerHTML = '<tr><td colspan="6" class="no-data" style="color:#c62828">Could not load.</td></tr>'; return; }
     var rows = (res.data || []).filter(function(d) {
-      if (['super_admin','it_admin'].includes((SESSION.role||'').toLowerCase())) return d.status === 'pending' || d.status === 'tl_verified';
-      return d.status === 'pending';
+      if ((SESSION.role||'').toLowerCase() === 'super_admin') return d.status === 'pending' || d.status === 'tl_verified';
+      return d.status === 'pending';   // TL, it_admin, state_lead: only pending
     });
     var countEl = document.getElementById('verifyPendingCount');
     if (countEl) countEl.textContent = rows.length ? rows.length + ' document(s) awaiting action' : 'All caught up!';
@@ -1753,7 +1753,7 @@ function loadVerify() {
       if (r.status === 'pending') {
         btns = '<button class="btn btn-success btn-sm vfy-btn" data-id="' + r.doc_id + '" data-action="verify"><i class="fa-solid fa-circle-check"></i> Verify</button> ' +
                '<button class="btn btn-danger btn-sm vfy-btn" data-id="' + r.doc_id + '" data-action="reject"><i class="fa-solid fa-circle-xmark"></i> Reject</button>';
-      } else if (r.status === 'tl_verified' && ['super_admin','it_admin'].includes((SESSION.role||'').toLowerCase())) {
+      } else if (r.status === 'tl_verified' && (SESSION.role||'').toLowerCase() === 'super_admin') {
         btns = '<button class="btn btn-success btn-sm vfy-btn" data-id="' + r.doc_id + '" data-action="approve"><i class="fa-solid fa-circle-check"></i> Approve</button> ' +
                '<button class="btn btn-danger btn-sm vfy-btn" data-id="' + r.doc_id + '" data-action="reject-approval"><i class="fa-solid fa-circle-xmark"></i> Reject</button>';
       }
