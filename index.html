@@ -1193,17 +1193,13 @@ function renderHomeDocs(append) {
     var num = start + i + 1;
 
     // Component + sub-component badges
-    var compBadge = d.component
-      ? '<span style="display:inline-block;background:#dbeafe;color:#1d4ed8;font-size:0.72rem;font-weight:700;padding:1px 8px;border-radius:4px;margin-right:4px">' + d.component + '</span>'
-      : '';
-    var docCell =
-      '<div style="margin-bottom:4px">' + compBadge + '</div>' +
-      '<div style="font-weight:600;color:#1e293b;font-size:0.92rem">' + (d.subject || '—') + '</div>';
-
-    // Action cell
+    var ext = d.file_name ? (d.file_name.split('.').pop() || '').toUpperCase() : '';
+    var docCell = '<span style="color:#1d4ed8;font-weight:700">' + (d.component || '') + '</span>' +
+      (d.component && d.subject ? '<span style="color:#94a3b8"> : </span>' : '') +
+      '<span style="color:#1e293b;font-weight:600">' + (d.subject || '—') + '</span>';
     var dl = d.drive_link
-      ? fileTypeBadge(d.file_name) +
-        '<div style="margin-top:6px"><a href="' + toDownloadUrl(d.drive_link) + '" target="_blank" class="btn btn-primary btn-sm"><i class="fa-solid fa-download"></i> Download</a></div>'
+      ? (ext ? '<span style="color:#dc2626;font-weight:700">' + ext + '</span><span style="color:#94a3b8"> : </span>' : '') +
+        '<a href="' + toDownloadUrl(d.drive_link) + '" target="_blank" style="color:#1565c0;font-weight:600;text-decoration:none">Download</a>'
       : '—';
 
     var row = document.createElement('tr');
@@ -1211,8 +1207,8 @@ function renderHomeDocs(append) {
       '<td style="width:32px;color:#94a3b8;font-size:0.82rem">' + num + '</td>' +
       '<td style="font-weight:600;color:#334155;white-space:nowrap">' + (d.uploader_name || '—') + '</td>' +
       '<td>' + docCell + '</td>' +
-      '<td style="white-space:nowrap;color:#475569">' + (d.month || '') + '<br><small style="color:#94a3b8">' + (d.year || '') + '</small></td>' +
-      '<td style="min-width:130px">' + dl + '</td>';
+      '<td style="white-space:nowrap;color:#475569">' + (d.month || '') + ' ' + (d.year || '') + '</td>' +
+      '<td style="white-space:nowrap">' + dl + '</td>';
     tbodyEl.appendChild(row);
   });
 
