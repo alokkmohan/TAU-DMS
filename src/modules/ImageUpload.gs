@@ -52,7 +52,12 @@ function uploadSingleImage(token, params) {
 
     // Upload file
     const file = folder.createFile(blob);
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    // Try domain sharing; silently skip if org policy restricts it
+    try {
+      file.setSharing(DriveApp.Access.DOMAIN_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch(shareErr) {
+      Logger.log('Sharing note (non-fatal): ' + shareErr.message);
+    }
 
     // Audit log
     try {
