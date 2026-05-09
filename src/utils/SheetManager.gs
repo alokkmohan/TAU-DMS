@@ -58,7 +58,13 @@ function getSheetData(tabName) {
 }
 
 function appendRow(tabName, rowData) {
-  const sheet = getSheet(tabName);
+  let sheet = getSheet(tabName);
+  // If tab doesn't exist, create it with headers from rowData keys
+  if (!sheet) {
+    sheet = SpreadsheetApp.openById(CONFIG.SHEET_ID).insertSheet(tabName);
+    const keys = Object.keys(rowData);
+    sheet.getRange(1, 1, 1, keys.length).setValues([keys]);
+  }
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const row = headers.map(h => rowData[h] !== undefined ? rowData[h] : '');
   sheet.appendRow(row);

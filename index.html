@@ -842,6 +842,7 @@ function fetchDropdownsFromGit() {
 
 // ── In-memory data cache (avoids repeat API calls within session) ──
 var CACHE = { docs: null, docsAt: 0, TTL: 90000 }; // 90 sec TTL
+var GALLERY_CACHE = null; // gallery events cache (cleared on image upload)
 
 function cachedGetDocuments() {
   if (CACHE.docs && (Date.now() - CACHE.docsAt) < CACHE.TTL) {
@@ -1969,6 +1970,7 @@ function submitImageUpload() {
       } else {
         document.getElementById('imageSuccessInfo').textContent = done + ' image' + (done > 1 ? 's' : '') + ' uploaded to "' + eventName + '"';
         document.getElementById('imageSuccessModal').classList.add('open');
+        GALLERY_CACHE = null;  // force gallery refresh next time
         clearImageSelection();
         document.getElementById('eventNameInput').value = '';
         loadImageEvents();
@@ -2005,30 +2007,41 @@ function submitImageUpload() {
   uploadNext(0);
 }
 
+function _renderGalleryRows(data, tbody) {
+  if (!data || !data.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="no-data">No image events yet. Upload images to create an event.</td></tr>';
+    return;
+  }
+  var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  tbody.innerHTML = data.map(function(ev, i) {
+    var d  = ev.createdAt ? new Date(ev.createdAt) : null;
+    var ds = d ? d.getDate() + " " + MONTHS[d.getMonth()] + " '" + String(d.getFullYear()).slice(-2) : '';
+    var link = ev.link
+      ? '<a href="' + ev.link + '" target="_blank" style="color:#6366f1;font-weight:600;text-decoration:none;white-space:nowrap"><i class="fa-solid fa-folder-open"></i> Open</a>'
+      : '&#x2014;';
+    return '<tr>' +
+      '<td style="width:28px;color:#94a3b8;font-size:.82rem">' + (i+1) + '</td>' +
+      '<td style="font-weight:600;color:#1e293b">' + (ev.name || '&#x2014;') + '</td>' +
+      '<td style="width:110px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#475569;font-size:.82rem" title="' + (ev.createdBy||'') + '">' + (ev.createdBy || '&#x2014;') + '</td>' +
+      '<td style="width:60px;white-space:nowrap;color:#64748b;font-size:.82rem">' + ds + '</td>' +
+      '<td style="width:1%;white-space:nowrap">' + link + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
 function loadGallery() {
   var tbody = document.getElementById('galleryEventList');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="5" class="no-data">Loading...</td></tr>';
+  // Show cached data instantly if available
+  if (GALLERY_CACHE) { _renderGalleryRows(GALLERY_CACHE, tbody); return; }
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#6366f1"><i class="fa-solid fa-spinner fa-spin"></i>&nbsp; Loading gallery...</td></tr>';
   api('getImageEvents', SESSION.token).then(function(res) {
-    if (!res.success || !res.data.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="no-data">No image events yet.</td></tr>';
+    if (!res.success) {
+      tbody.innerHTML = '<tr><td colspan="5" class="no-data" style="color:#c62828">Could not load gallery.</td></tr>';
       return;
     }
-    var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    tbody.innerHTML = res.data.map(function(ev, i) {
-      var d  = ev.createdAt ? new Date(ev.createdAt) : null;
-      var ds = d ? d.getDate() + " " + MONTHS[d.getMonth()] + " '" + String(d.getFullYear()).slice(-2) : '';
-      var link = ev.link
-        ? '<a href="' + ev.link + '" target="_blank" style="color:#6366f1;font-weight:600;text-decoration:none;white-space:nowrap"><i class="fa-solid fa-folder-open"></i> Open</a>'
-        : '&#x2014;';
-      return '<tr>' +
-        '<td style="width:28px;color:#94a3b8;font-size:.82rem">' + (i+1) + '</td>' +
-        '<td style="font-weight:600;color:#1e293b">' + (ev.name || '&#x2014;') + '</td>' +
-        '<td style="width:110px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#475569;font-size:.82rem" title="' + (ev.createdBy||'') + '">' + (ev.createdBy || '&#x2014;') + '</td>' +
-        '<td style="width:60px;white-space:nowrap;color:#64748b;font-size:.82rem">' + ds + '</td>' +
-        '<td style="width:1%;white-space:nowrap">' + link + '</td>' +
-        '</tr>';
-    }).join('');
+    GALLERY_CACHE = res.data || [];
+    _renderGalleryRows(GALLERY_CACHE, tbody);
   }).catch(function() {
     tbody.innerHTML = '<tr><td colspan="5" class="no-data" style="color:#c62828">Failed to load.</td></tr>';
   });
