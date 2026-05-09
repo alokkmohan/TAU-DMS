@@ -440,7 +440,7 @@
           </div>
           <!-- Custom sub-component (if not in list) -->
           <div id="customSubGroup" style="display:none;margin-top:-8px;margin-bottom:8px;padding:10px 12px;background:#f3f4f6;border-radius:6px;border:1px dashed #9e9e9e">
-            <div style="font-size:0.85rem;color:#555;margin-bottom:6px">➕ Add new sub-component to list (one-time)</div>
+            <div style="font-size:0.85rem;color:#555;margin-bottom:6px">➕ Add new sub-component under: <b id="customSubCompLabel" style="color:#1565c0">— select component first —</b></div>
             <div class="form-row" style="gap:8px">
               <div class="form-group" style="margin-bottom:0">
                 <input type="text" id="customSubName" placeholder="Sub-component name *">
@@ -1388,7 +1388,14 @@ function toggleCustomComp(e) {
 }
 function toggleCustomSub(e) {
   e.preventDefault();
+  var comp = document.getElementById('componentSelect').value;
+  if (!comp || comp === 'Circular') {
+    alert('Please select a component first before adding a sub-component.');
+    return;
+  }
   var g = document.getElementById('customSubGroup');
+  var label = document.getElementById('customSubCompLabel');
+  if (label) label.textContent = comp;
   g.style.display = g.style.display === 'none' ? 'block' : 'none';
 }
 
