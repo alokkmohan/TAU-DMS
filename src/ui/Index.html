@@ -1143,13 +1143,9 @@ function renderHomeDocs(append) {
     var compBadge = d.component
       ? '<span style="display:inline-block;background:#dbeafe;color:#1d4ed8;font-size:0.72rem;font-weight:700;padding:1px 8px;border-radius:4px;margin-right:4px">' + d.component + '</span>'
       : '';
-    var subBadge = d.sub_component
-      ? '<span style="display:inline-block;background:#d1fae5;color:#065f46;font-size:0.72rem;font-weight:600;padding:1px 8px;border-radius:4px">' + d.sub_component + '</span>'
-      : '';
     var docCell =
-      '<div style="margin-bottom:4px">' + compBadge + subBadge + '</div>' +
-      '<div style="font-weight:600;color:#1e293b;font-size:0.92rem">' + (d.subject || '—') + '</div>' +
-      (d.description ? '<div style="color:#64748b;font-size:0.79rem;margin-top:2px">' + d.description + '</div>' : '');
+      '<div style="margin-bottom:4px">' + compBadge + '</div>' +
+      '<div style="font-weight:600;color:#1e293b;font-size:0.92rem">' + (d.subject || '—') + '</div>';
     var dl = d.drive_link
       ? fileTypeBadge(d.file_name) +
         '<div style="margin-top:6px"><a href="' + toDownloadUrl(d.drive_link) + '" target="_blank" class="btn btn-primary btn-sm"><i class="fa-solid fa-download"></i> Download</a></div>'
