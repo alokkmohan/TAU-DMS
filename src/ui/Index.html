@@ -504,6 +504,56 @@
         </div>
       </div>
 
+
+      <!-- ++ UPLOAD IMAGES ++ -->
+      <div class="section" id="sec-images">
+        <div class="card">
+          <div class="card-title">Upload Images</div>
+          <div id="imageAlert" class="alert" style="display:none"></div>
+          <div class="form-group">
+            <label>Event Name <span style="color:#c62828">*</span></label>
+            <input type="text" id="eventNameInput" placeholder="e.g. Annual Day 2025, Sports Meet April 2026" style="max-width:480px">
+          </div>
+          <div class="form-group">
+            <label>Select Images <span style="color:#c62828">*</span></label>
+            <div id="imgFileDrop" onclick="document.getElementById('imageFileInput').click()"
+                 ondragover="event.preventDefault();this.style.borderColor='#6366f1'"
+                 ondragleave="this.style.borderColor=''"
+                 ondrop="event.preventDefault();this.style.borderColor='';handleImageDrop(event)"
+                 style="border:2px dashed #cbd5e1;border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:border-color .2s">
+              <i class="fa-solid fa-images" style="font-size:2rem;color:#94a3b8;margin-bottom:8px;display:block"></i>
+              <p style="margin:0;font-weight:500;color:#475569">Click to browse or drag and drop images here</p>
+              <small style="color:#94a3b8">JPG, PNG, GIF, WEBP, HEIC | Max 10 MB per image | Multiple files allowed</small>
+            </div>
+            <input type="file" id="imageFileInput" style="display:none"
+                   accept=".jpg,.jpeg,.png,.gif,.webp,.heic,.heif" multiple
+                   onchange="handleImageSelect(this.files)">
+          </div>
+          <div id="imageSelectedCount" style="display:none;margin-bottom:12px;font-size:.9rem;color:#475569"></div>
+          <div id="imagePreviewGrid" style="display:none;flex-wrap:wrap;gap:10px;margin-bottom:16px"></div>
+          <div id="imageProgressWrap" style="display:none;margin-bottom:16px">
+            <div style="font-size:.9rem;color:#475569;margin-bottom:6px">
+              Uploading <span id="imgCurrent">0</span> of <span id="imgTotal">0</span> images...
+            </div>
+            <div style="background:#e2e8f0;border-radius:8px;height:10px;overflow:hidden">
+              <div id="imgProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#3730a3,#6366f1);transition:width .3s"></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+            <button class="btn btn-primary" id="imageUploadBtn" onclick="submitImageUpload()">
+              <i class="fa-solid fa-cloud-arrow-up"></i> Upload Images
+            </button>
+            <button class="btn" id="imageClearBtn" onclick="clearImageSelection()" style="display:none;background:#e2e8f0;color:#475569">
+              <i class="fa-solid fa-xmark"></i> Clear
+            </button>
+          </div>
+          <div id="imageEventHistory" style="margin-top:24px;display:none">
+            <div style="font-weight:600;color:#1e293b;margin-bottom:10px">Previous Event Folders</div>
+            <div id="imageEventList"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- ── MY DOCUMENTS ── -->
       <div class="section" id="sec-mydocs">
         <div class="card">
@@ -933,6 +983,7 @@ function buildSidebar() {
     items.push({ id: 'verify',    icon: 'fa-circle-check',   label: 'Verify Documents' });
   }
   items.push({ id: 'circulars',   icon: 'fa-bullhorn',       label: 'Circulars' });
+  items.push({ id: 'images',     icon: 'fa-images',         label: 'Upload Images' });
 
   document.getElementById('sidebar').innerHTML = items.map(function(item) {
     return '<div class="nav-item" id="nav-' + item.id + '" onclick="showSection(\''' + item.id + '\')">' +
@@ -952,6 +1003,7 @@ function showSection(id) {
   if (id === 'mydocs')    loadDocs();
   if (id === 'alldocs')   loadAllDocs();
   if (id === 'circulars') loadCirculars();
+  if (id === 'images')    loadImageEvents();
 }
 
 function refreshUploadDropdowns() {
@@ -1589,6 +1641,163 @@ function logout() {
 // ════════════════════════════════════════════════
 //  START
 // ════════════════════════════════════════════════
+
+// ================================================
+//  IMAGE UPLOAD
+// ================================================
+var IMG_FILES = [];
+
+function handleImageSelect(files) {
+  IMG_FILES = Array.from(files);
+  renderImagePreviews();
+}
+
+function handleImageDrop(event) {
+  var files = Array.from(event.dataTransfer.files).filter(function(f) {
+    return f.type.startsWith('image/');
+  });
+  IMG_FILES = files;
+  renderImagePreviews();
+}
+
+function renderImagePreviews() {
+  var grid   = document.getElementById('imagePreviewGrid');
+  var count  = document.getElementById('imageSelectedCount');
+  var clearB = document.getElementById('imageClearBtn');
+  if (!IMG_FILES.length) {
+    grid.style.display   = 'none';
+    count.style.display  = 'none';
+    clearB.style.display = 'none';
+    return;
+  }
+  count.style.display  = 'block';
+  count.textContent    = IMG_FILES.length + ' image' + (IMG_FILES.length > 1 ? 's' : '') + ' selected';
+  clearB.style.display = 'inline-flex';
+  grid.innerHTML = '';
+  grid.style.display = 'flex';
+  IMG_FILES.forEach(function(file, idx) {
+    var div = document.createElement('div');
+    div.style.cssText = 'position:relative;width:90px;height:90px;border-radius:8px;overflow:hidden;background:#f1f5f9;border:1px solid #e2e8f0';
+    var img = document.createElement('img');
+    img.src   = URL.createObjectURL(file);
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover';
+    var rem = document.createElement('div');
+    rem.innerHTML = 'x';
+    rem.title = 'Remove';
+    rem.style.cssText = 'position:absolute;top:2px;right:4px;background:rgba(0,0,0,.55);color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:700';
+    rem.onclick = (function(i){ return function(){ IMG_FILES.splice(i,1); renderImagePreviews(); }; })(idx);
+    div.appendChild(img);
+    div.appendChild(rem);
+    grid.appendChild(div);
+  });
+}
+
+function clearImageSelection() {
+  IMG_FILES = [];
+  document.getElementById('imageFileInput').value = '';
+  renderImagePreviews();
+}
+
+function imgAlert(msg, type) {
+  var el = document.getElementById('imageAlert');
+  el.className = 'alert alert-' + (type || 'error');
+  el.textContent = msg;
+  el.style.display = 'block';
+  if (type === 'success') setTimeout(function(){ el.style.display='none'; }, 4000);
+}
+
+function submitImageUpload() {
+  var eventName = (document.getElementById('eventNameInput').value || '').trim();
+  if (!eventName) { imgAlert('Please enter an event name.'); return; }
+  if (!IMG_FILES.length) { imgAlert('Please select at least one image.'); return; }
+
+  var MAX_MB = 10;
+  var oversize = IMG_FILES.filter(function(f){ return f.size > MAX_MB * 1024 * 1024; });
+  if (oversize.length) {
+    imgAlert('These files exceed 10 MB: ' + oversize.map(function(f){ return f.name; }).join(', '));
+    return;
+  }
+
+  document.getElementById('imageAlert').style.display = 'none';
+  var btn  = document.getElementById('imageUploadBtn');
+  var prog = document.getElementById('imageProgressWrap');
+  var bar  = document.getElementById('imgProgressBar');
+  var cur  = document.getElementById('imgCurrent');
+  var tot  = document.getElementById('imgTotal');
+
+  btn.disabled       = true;
+  prog.style.display = 'block';
+  tot.textContent    = IMG_FILES.length;
+  cur.textContent    = '0';
+  bar.style.width    = '0%';
+
+  var done   = 0;
+  var errors = [];
+
+  function uploadNext(idx) {
+    if (idx >= IMG_FILES.length) {
+      btn.disabled       = false;
+      prog.style.display = 'none';
+      if (errors.length) {
+        imgAlert('Uploaded ' + done + '/' + IMG_FILES.length + ' images. Failed: ' + errors.join(', '), 'error');
+      } else {
+        imgAlert(done + ' image' + (done > 1 ? 's' : '') + ' uploaded successfully to event: ' + eventName, 'success');
+        clearImageSelection();
+        loadImageEvents();
+      }
+      return;
+    }
+    var file   = IMG_FILES[idx];
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var b64 = e.target.result.split(',')[1];
+      api('uploadSingleImage', SESSION.token, {
+        eventName:  eventName,
+        fileName:   file.name,
+        mimeType:   file.type || 'image/jpeg',
+        fileBase64: b64
+      }).then(function(res) {
+        done++;
+        cur.textContent = done;
+        bar.style.width = Math.round(done / IMG_FILES.length * 100) + '%';
+        if (!res.success) errors.push(file.name);
+        uploadNext(idx + 1);
+      }).catch(function() {
+        errors.push(file.name);
+        uploadNext(idx + 1);
+      });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  uploadNext(0);
+}
+
+function loadImageEvents() {
+  var histDiv = document.getElementById('imageEventHistory');
+  var listDiv = document.getElementById('imageEventList');
+  listDiv.innerHTML = '<span style="color:#94a3b8;font-size:.9rem">Loading...</span>';
+  histDiv.style.display = 'block';
+  api('getImageEvents', SESSION.token).then(function(res) {
+    if (!res.success || !res.data.length) {
+      listDiv.innerHTML = '<span style="color:#94a3b8;font-size:.9rem">No event folders yet.</span>';
+      return;
+    }
+    listDiv.innerHTML = res.data.map(function(ev) {
+      var d  = new Date(ev.createdAt);
+      var ds = d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
+      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px">' +
+        '<i class="fa-solid fa-folder" style="color:#f59e0b;font-size:1.2rem"></i>' +
+        '<div style="flex:1"><div style="font-weight:600;color:#1e293b">' + ev.name + '</div>' +
+        '<div style="font-size:.82rem;color:#94a3b8">Created: ' + ds + '</div></div>' +
+        '<a href="' + ev.link + '" target="_blank" style="font-size:.85rem;color:#6366f1;font-weight:500;text-decoration:none">Open in Drive</a>' +
+        '</div>';
+    }).join('');
+  }).catch(function() {
+    listDiv.innerHTML = '<span style="color:#c62828;font-size:.9rem">Failed to load event folders.</span>';
+  });
+}
+
 initApp();
 </script>
 </body>

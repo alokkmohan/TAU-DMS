@@ -72,6 +72,10 @@ function _route(action, p) {
     case 'getCirculars':          return getCirculars(p[0]);
     case 'acknowledgeCircular':   return acknowledgeCircular(p[0], p[1]);
 
+    // ── Image upload ──────────────────────────────────────────
+    case 'uploadSingleImage': return uploadSingleImage(p[0], p[1]);
+    case 'getImageEvents':    return getImageEvents(p[0]);
+
     // ── Admin / Git utilities ─────────────────────────────────
     case 'migrateDropdowns': return migrateDropdowns(p[0]);
 
