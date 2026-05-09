@@ -1022,8 +1022,8 @@ function buildSidebar() {
   var role      = (SESSION.role || '').toLowerCase();
   // Sirf TL aur IT Admin verify kar sakte hain
   var canVerify = ['team_lead','it_admin'].includes(role);
-  // State lead, PM, CEO sab docs dekh sakte hain lekin verify nahi
-  var canSeeAll = ['team_lead','it_admin','state_lead','project_manager','ceo'].includes(role);
+  // Sab log All Documents dekh sakte hain — verified docs share karne ke liye hi system banaya hai
+  var canSeeAll = true;
 
   var items = [
     { id: 'home',      icon: 'fa-house',           label: 'Home' },

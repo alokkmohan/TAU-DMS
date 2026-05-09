@@ -372,13 +372,11 @@ function getDocuments(token, filters) {
 
       if (role === CONFIG.ROLES.SUPER_ADMIN || role === CONFIG.ROLES.IT_ADMIN) return true;
 
-      // Component-based sharing (target_component)
-      if (role === CONFIG.ROLES.MANAGER) {
-        const userAccess = _getUserComponentAccess(session.email);
-        const tc = (r.target_component || '').trim().toUpperCase();
-        if (tc === 'ALL') return true;
-        if (tc && userAccess !== 'ALL' && tc === userAccess.toUpperCase()) return true;
-        if (tc && userAccess === 'ALL') return true;
+      // Manager / Communication: dusron ke verified docs bhi dekh sakte hain
+      // (System ka purpose: TL verify kare toh sabko dikhe, koi bhi use kar sake)
+      if (role === CONFIG.ROLES.MANAGER || role === CONFIG.ROLES.COMMUNICATION) {
+        if (r.status === CONFIG.STATUS.TL_VERIFIED || r.status === CONFIG.STATUS.ADMIN_APPROVED) return true;
+        return false; // dusron ke pending/rejected docs nahi dikhenge
       }
 
       return matchesAudience(docState);
