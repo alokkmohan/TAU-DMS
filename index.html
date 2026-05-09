@@ -57,7 +57,7 @@
       box-shadow: 0 4px 24px rgba(15,23,42,0.45);
     }
     .topbar-left { display: flex; align-items: center; gap: 14px; }
-    .topbar-logo { height: 38px; object-fit: contain; border-radius: 6px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+    .topbar-logo { height: 36px; object-fit: contain; background: #fff; padding: 3px 8px; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.25); }
     .topbar-brand { display: flex; flex-direction: column; line-height: 1.2; }
     .topbar-brand-main { font-size: 1.02rem; font-weight: 800; letter-spacing: 0.2px; }
     .topbar-brand-sub  { font-size: 0.68rem; color: rgba(165,180,252,0.85); font-weight: 400; letter-spacing: 0.3px; }
@@ -1524,13 +1524,16 @@ function renderDocsTable(tbodyId, rows, showUploader) {
       ? '<button class="btn btn-success btn-sm" onclick="verifyDoc(\'' + r.doc_id + '\')"><i class="fa-solid fa-circle-check"></i> Verify</button> ' +
         '<button class="btn btn-danger btn-sm" onclick="openRejectModal(\'' + r.doc_id + '\')"><i class="fa-solid fa-circle-xmark"></i> Reject</button>'
       : '';
+    var compBadge = r.component
+      ? '<span style="display:inline-block;background:#dbeafe;color:#1d4ed8;font-size:0.72rem;font-weight:700;padding:1px 8px;border-radius:4px;margin-right:4px">' + r.component + '</span>'
+      : '';
+    var subBadge = r.sub_component
+      ? '<span style="display:inline-block;background:#d1fae5;color:#065f46;font-size:0.72rem;font-weight:600;padding:1px 8px;border-radius:4px">' + r.sub_component + '</span>'
+      : '';
     var docCell =
-      '<div style="font-size:0.78rem;color:#64748b;margin-bottom:2px">Document Type: ' +
-        '<span style="color:#1565c0;font-weight:700">' + (r.component || '—') + '</span>' +
-        (r.sub_component ? ' &rsaquo; <span style="color:#0f766e">' + r.sub_component + '</span>' : '') +
-      '</div>' +
-      '<div style="font-weight:600;color:#1e293b;font-size:0.93rem">' + (r.subject || '—') + '</div>' +
-      (r.description ? '<div style="color:#64748b;font-size:0.8rem;margin-top:2px">' + r.description + '</div>' : '');
+      '<div style="margin-bottom:4px">' + compBadge + subBadge + '</div>' +
+      '<div style="font-weight:600;color:#1e293b;font-size:0.92rem">' + (r.subject || '—') + '</div>' +
+      (r.description ? '<div style="color:#64748b;font-size:0.79rem;margin-top:2px">' + r.description + '</div>' : '');
     var actionCell =
       fileTypeBadge(r.file_name) +
       '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">' +
