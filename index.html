@@ -1798,14 +1798,28 @@ function loadVerify() {
       var subBadge  = r.sub_component ? '<span style="display:inline-block;background:#d1fae5;color:#065f46;font-size:0.72rem;font-weight:600;padding:1px 8px;border-radius:4px">' + r.sub_component + '</span>' : '';
       var docCell   = '<div style="margin-bottom:4px">' + compBadge + subBadge + '</div><div style="font-weight:600;color:#1e293b;font-size:0.92rem">' + (r.subject || '&mdash;') + '</div>' + (r.description ? '<div style="color:#64748b;font-size:0.79rem;margin-top:2px">' + r.description + '</div>' : '');
       var btns = '';
+      // ── Use data-* attributes — no inline JS quotes needed ──
       if (r.status === 'pending') {
-        btns = '<button class="btn btn-success btn-sm" onclick="verifyDoc(\''+r.doc_id+'\',true)"><i class="fa-solid fa-circle-check"></i> Verify</button> <button class="btn btn-danger btn-sm" onclick="openRejectModal(\''+r.doc_id+'\',false,true)"><i class="fa-solid fa-circle-xmark"></i> Reject</button>';
+        btns = '<button class="btn btn-success btn-sm vfy-btn" data-id="' + r.doc_id + '" data-action="verify"><i class="fa-solid fa-circle-check"></i> Verify</button> ' +
+               '<button class="btn btn-danger btn-sm vfy-btn" data-id="' + r.doc_id + '" data-action="reject"><i class="fa-solid fa-circle-xmark"></i> Reject</button>';
       } else if (r.status === 'tl_verified' && SESSION.role === 'super_admin') {
-        btns = '<button class="btn btn-success btn-sm" onclick="approveDoc(\''+r.doc_id+'\')"><i class="fa-solid fa-circle-check"></i> Approve</button> <button class="btn btn-danger btn-sm" onclick="openRejectModal(\''+r.doc_id+'\',true,true)"><i class="fa-solid fa-circle-xmark"></i> Reject</button>';
+        btns = '<button class="btn btn-success btn-sm vfy-btn" data-id="' + r.doc_id + '" data-action="approve"><i class="fa-solid fa-circle-check"></i> Approve</button> ' +
+               '<button class="btn btn-danger btn-sm vfy-btn" data-id="' + r.doc_id + '" data-action="reject-approval"><i class="fa-solid fa-circle-xmark"></i> Reject</button>';
       }
       var actionCell = fileTypeBadge(r.file_name) + '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px"><a href="' + toDownloadUrl(r.drive_link) + '" target="_blank" class="btn btn-primary btn-sm"><i class="fa-solid fa-download"></i> Download</a>' + btns + '</div>';
       return '<tr><td style="width:32px;color:#94a3b8;font-size:0.82rem">' + (i+1) + '</td><td style="font-weight:600;color:#334155">' + (r.uploader_name||'') + '</td><td>' + docCell + '</td><td style="white-space:nowrap">' + r.month + '<br><small style="color:#94a3b8">' + r.year + '</small></td><td>' + statusBadge(r.status) + '</td><td style="min-width:160px">' + actionCell + '</td></tr>';
     }).join('');
+    // ── Single event listener on tbody — handles all buttons ──
+    tbody.onclick = function(e) {
+      var btn = e.target.closest('.vfy-btn');
+      if (!btn) return;
+      var id     = btn.dataset.id;
+      var action = btn.dataset.action;
+      if (action === 'verify')         verifyDoc(id, true);
+      else if (action === 'approve')   approveDoc(id);
+      else if (action === 'reject')         openRejectModal(id, false, true);
+      else if (action === 'reject-approval') openRejectModal(id, true,  true);
+    };
   });
 }
 
