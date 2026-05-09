@@ -130,18 +130,17 @@ function getImageEvents(token) {
       });
     }
 
-    // Also try to enrich with uploader name from sheet (best-effort)
+    // Enrich with uploader name from AuditLog (IMAGE_UPLOAD entries)
     try {
-      const rows = getSheetData(CONFIG.TABS.IMAGE_EVENTS);
-      if (rows && rows.length) {
-        events.forEach(function(ev) {
-          const match = rows.find(function(r) {
-            return (r.event_name || '').toLowerCase() === ev.name.toLowerCase();
-          });
-          if (match) ev.createdBy = match.created_by_name || '';
+      const auditRows = getSheetData(CONFIG.TABS.AUDIT_LOG);
+      const imgUploads = auditRows.filter(function(r) { return r.action === 'IMAGE_UPLOAD'; });
+      events.forEach(function(ev) {
+        const match = imgUploads.find(function(r) {
+          return (r.ip_note || '').toLowerCase() === ('event:' + ev.name).toLowerCase();
         });
-      }
-    } catch(e) { /* sheet enrichment is optional */ }
+        if (match) ev.createdBy = match.user_name || '';
+      });
+    } catch(e) { /* non-fatal */ }
 
     // Newest first
     events.sort(function(a, b) {
