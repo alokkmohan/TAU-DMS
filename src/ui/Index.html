@@ -1350,13 +1350,26 @@ function loadSubComponents() {
   sub.disabled = !comp;
   if (!comp) return;
 
+  // ── Use SUBCACHE first (instant, no API call) ──────────────────
+  if (SUBCACHE[comp] && SUBCACHE[comp].length > 0) {
+    SUBCACHE[comp].forEach(function(item) {
+      var o = document.createElement('option');
+      o.value = item.sub; o.textContent = item.sub; o.dataset.desc = item.desc || '';
+      sub.appendChild(o);
+    });
+    sub.disabled = false;
+    return;
+  }
+  // Fallback: fetch from GAS if cache empty
   api('getSubComponents', SESSION.token, comp)
     .then(function(res) {
       if (!res.success) return;
+      if (!SUBCACHE[comp]) SUBCACHE[comp] = [];
       res.data.forEach(function(item) {
         var o = document.createElement('option');
-        o.value = item.sub; o.textContent = item.sub; o.dataset.desc = item.desc;
+        o.value = item.sub; o.textContent = item.sub; o.dataset.desc = item.desc || '';
         sub.appendChild(o);
+        SUBCACHE[comp].push({ sub: item.sub, desc: item.desc || '' });
       });
       sub.disabled = false;
     });
