@@ -553,11 +553,37 @@
               <i class="fa-solid fa-xmark"></i> Clear
             </button>
           </div>
-          <div id="imageEventHistory" style="margin-top:28px">
-            <div style="font-weight:600;color:#1e293b;margin-bottom:10px;font-size:1rem">&#x1F4C1; Image Event Gallery</div>
-            <div class="table-wrap"><table><thead><tr><th style="width:28px">#</th><th>Event Name</th><th style="width:110px">Uploaded By</th><th style="width:60px">Date</th><th style="width:1%;white-space:nowrap">Action</th></tr></thead><tbody id="imageEventList"><tr><td colspan="5" class="no-data">Loading...</td></tr></tbody></table></div>
+
+        </div>
+
+      <!-- ++ IMAGE GALLERY ++ -->
+      <div class="section" id="sec-gallery">
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+            <div class="card-title" style="margin-bottom:0">&#x1F4F7; Image Event Gallery</div>
+            <button class="btn btn-outline btn-sm" onclick="showSection('images')" style="white-space:nowrap">
+              <i class="fa-solid fa-cloud-arrow-up"></i> Upload Images
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:28px">#</th>
+                  <th>Event Name</th>
+                  <th style="width:110px">Uploaded By</th>
+                  <th style="width:60px">Date</th>
+                  <th style="width:1%;white-space:nowrap">Action</th>
+                </tr>
+              </thead>
+              <tbody id="galleryEventList">
+                <tr><td colspan="5" class="no-data">Loading...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
+      </div>
+
       </div>
 
       <!-- ── MY DOCUMENTS ── -->
@@ -1007,6 +1033,7 @@ function buildSidebar() {
   }
   items.push({ id: 'circulars',   icon: 'fa-bullhorn',       label: 'Circulars' });
   items.push({ id: 'images',     icon: 'fa-images',         label: 'Upload Images' });
+  items.push({ id: 'gallery',    icon: 'fa-photo-film',     label: 'Image Gallery' });
 
   document.getElementById('sidebar').innerHTML = items.map(function(item) {
     return '<div class=\"nav-item\" id=\"nav-' + item.id + '\" onclick=\"showSection(' + "'" + item.id + "'" + ')\">' +
@@ -1027,6 +1054,7 @@ function showSection(id) {
   if (id === 'alldocs')   loadAllDocs();
   if (id === 'circulars') loadCirculars();
   if (id === 'images')    loadImageEvents();
+  if (id === 'gallery')   loadGallery();
 }
 
 function refreshUploadDropdowns() {
@@ -1933,6 +1961,35 @@ function submitImageUpload() {
   }
 
   uploadNext(0);
+}
+
+function loadGallery() {
+  var tbody = document.getElementById('galleryEventList');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5" class="no-data">Loading...</td></tr>';
+  api('getImageEvents', SESSION.token).then(function(res) {
+    if (!res.success || !res.data.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="no-data">No image events yet.</td></tr>';
+      return;
+    }
+    var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    tbody.innerHTML = res.data.map(function(ev, i) {
+      var d  = ev.createdAt ? new Date(ev.createdAt) : null;
+      var ds = d ? d.getDate() + " " + MONTHS[d.getMonth()] + " '" + String(d.getFullYear()).slice(-2) : '';
+      var link = ev.link
+        ? '<a href="' + ev.link + '" target="_blank" style="color:#6366f1;font-weight:600;text-decoration:none;white-space:nowrap"><i class="fa-solid fa-folder-open"></i> Open</a>'
+        : '&#x2014;';
+      return '<tr>' +
+        '<td style="width:28px;color:#94a3b8;font-size:.82rem">' + (i+1) + '</td>' +
+        '<td style="font-weight:600;color:#1e293b">' + (ev.name || '&#x2014;') + '</td>' +
+        '<td style="width:110px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#475569;font-size:.82rem" title="' + (ev.createdBy||'') + '">' + (ev.createdBy || '&#x2014;') + '</td>' +
+        '<td style="width:60px;white-space:nowrap;color:#64748b;font-size:.82rem">' + ds + '</td>' +
+        '<td style="width:1%;white-space:nowrap">' + link + '</td>' +
+        '</tr>';
+    }).join('');
+  }).catch(function() {
+    tbody.innerHTML = '<tr><td colspan="5" class="no-data" style="color:#c62828">Failed to load.</td></tr>';
+  });
 }
 
 function loadImageEvents() {
