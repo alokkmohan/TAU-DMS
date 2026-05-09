@@ -961,7 +961,14 @@ function showDashboard() {
     }
   });
 }
-  }
+
+function sendOTP() {
+  var email = (document.getElementById('emailInput').value || '').trim();
+  if (!email) { showLoginMsg('Please enter your email address.', 'error'); return; }
+  var validDomains = ['educategirls.ngo', 'up.egtau.org'];
+  var domainOk = validDomains.some(function(d) { return email.toLowerCase().endsWith('@' + d); });
+  if (!domainOk) { showLoginMsg('Only educategirls.ngo or up.egtau.org emails are allowed.', 'error'); return; }
+
   setLoginLoading('sendOtpBtn', true, 'Send OTP');
   document.getElementById('loginMsg').style.display = 'none';
 
