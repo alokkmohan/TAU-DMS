@@ -7,6 +7,9 @@
 //        └── [Event Name]/
 //            ├── photo1.jpg
 //            └── photo2.png
+//
+//  Sheet: ImageEvents
+//    event_name | created_by_email | created_by_name | folder_id | created_at
 // ─────────────────────────────────────────────────────────────
 
 // ── Get or create the top-level "Images" folder under DMS root ──
@@ -21,8 +24,8 @@ function _getImagesRootFolder() {
 function _getEventFolder(eventName) {
   const imagesRoot = _getImagesRootFolder();
   const iter = imagesRoot.getFoldersByName(eventName);
-  if (iter.hasNext()) return iter.next();
-  return imagesRoot.createFolder(eventName);
+  if (iter.hasNext()) return { folder: iter.next(), isNew: false };
+  return { folder: imagesRoot.createFolder(eventName), isNew: true };
 }
 
 // ── Upload a single image (called once per file from frontend) ──
@@ -48,7 +51,27 @@ function uploadSingleImage(token, params) {
     const blob    = Utilities.newBlob(decoded, mimeType || 'image/jpeg', fileName);
 
     // Get / create event folder
-    const folder = _getEventFolder(eventName.trim());
+    const { folder, isNew } = _getEventFolder(eventName.trim());
+
+    // If brand-new event folder → log to ImageEvents sheet
+    if (isNew) {
+      try {
+        // Check first (in case of race condition)
+        const existing = getSheetData(CONFIG.TABS.IMAGE_EVENTS);
+        const alreadyLogged = existing.some(function(e) {
+          return (e.event_name || '').toLowerCase() === eventName.trim().toLowerCase();
+        });
+        if (!alreadyLogged) {
+          appendRow(CONFIG.TABS.IMAGE_EVENTS, {
+            event_name:       eventName.trim(),
+            created_by_email: session.email,
+            created_by_name:  session.name,
+            folder_id:        folder.getId(),
+            created_at:       new Date().toISOString()
+          });
+        }
+      } catch(e) { Logger.log('ImageEvents log error (non-fatal): ' + e.message); }
+    }
 
     // Upload file
     const file = folder.createFile(blob);
@@ -86,25 +109,31 @@ function uploadSingleImage(token, params) {
   }
 }
 
-// ── Get list of event folders (for dropdown / history) ──────────
+// ── Get list of event folders with uploader info ─────────────────
 function getImageEvents(token) {
   try {
     const session = requireAuth(token);
     if (!session) return errorResponse('Not authenticated.');
 
-    const imagesRoot = _getImagesRootFolder();
-    const iter = imagesRoot.getFolders();
-    const events = [];
-    while (iter.hasNext()) {
-      const f = iter.next();
-      events.push({
-        name:      f.getName(),
-        link:      f.getUrl(),
-        createdAt: f.getDateCreated().toISOString()
-      });
-    }
-    // Sort newest first
-    events.sort(function(a,b){ return new Date(b.createdAt) - new Date(a.createdAt); });
+    // Read from ImageEvents sheet (has uploader info)
+    const rows = getSheetData(CONFIG.TABS.IMAGE_EVENTS);
+    const events = rows.map(function(r) {
+      return {
+        name:      r.event_name || '',
+        createdBy: r.created_by_name || '',
+        folderId:  r.folder_id || '',
+        link:      r.folder_id
+                     ? 'https://drive.google.com/drive/folders/' + r.folder_id
+                     : '',
+        createdAt: r.created_at || ''
+      };
+    });
+
+    // Newest first
+    events.sort(function(a, b) {
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+
     return successResponse(events);
   } catch(e) {
     return errorResponse(e.message);

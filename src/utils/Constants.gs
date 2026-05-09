@@ -19,12 +19,14 @@ const CONFIG = {
     AUDIT_LOG:    'AuditLog',
     OTP_STORE:    'OTPStore',
     CIRCULARS:    'Circulars',
-    CIRCULAR_ACK: 'CircularAck'
+    CIRCULAR_ACK: 'CircularAck',
+    IMAGE_EVENTS: 'ImageEvents'
   },
 
   // ── Role Hierarchy (bottom → top) ─────────────
   ROLES: {
     MANAGER:         'manager',
+    COMMUNICATION:   'communication',
     TEAM_LEAD:       'team_lead',
     STATE_LEAD:      'state_lead',
     PROJECT_MANAGER: 'project_manager',

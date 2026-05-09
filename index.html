@@ -549,9 +549,9 @@
               <i class="fa-solid fa-xmark"></i> Clear
             </button>
           </div>
-          <div id="imageEventHistory" style="margin-top:24px;display:none">
-            <div style="font-weight:600;color:#1e293b;margin-bottom:10px">Previous Event Folders</div>
-            <div id="imageEventList"></div>
+          <div id="imageEventHistory" style="margin-top:28px">
+            <div style="font-weight:600;color:#1e293b;margin-bottom:10px;font-size:1rem">&#x1F4C1; Image Event Gallery</div>
+            <div class="table-wrap"><table><thead><tr><th style="width:28px">#</th><th>Event Name</th><th style="width:110px">Uploaded By</th><th style="width:60px">Date</th><th style="width:1%;white-space:nowrap">Action</th></tr></thead><tbody id="imageEventList"><tr><td colspan="5" class="no-data">Loading...</td></tr></tbody></table></div>
           </div>
         </div>
       </div>
@@ -1898,27 +1898,30 @@ function submitImageUpload() {
 }
 
 function loadImageEvents() {
-  var histDiv = document.getElementById('imageEventHistory');
-  var listDiv = document.getElementById('imageEventList');
-  listDiv.innerHTML = '<span style="color:#94a3b8;font-size:.9rem">Loading...</span>';
-  histDiv.style.display = 'block';
+  var tbody = document.getElementById('imageEventList');
+  tbody.innerHTML = '<tr><td colspan="5" class="no-data">Loading...</td></tr>';
   api('getImageEvents', SESSION.token).then(function(res) {
     if (!res.success || !res.data.length) {
-      listDiv.innerHTML = '<span style="color:#94a3b8;font-size:.9rem">No event folders yet.</span>';
+      tbody.innerHTML = '<tr><td colspan="5" class="no-data">No image events yet. Upload the first event above!</td></tr>';
       return;
     }
-    listDiv.innerHTML = res.data.map(function(ev) {
-      var d = new Date(ev.createdAt);
-      var ds = d.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
-      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px">' +
-        '<i class="fa-solid fa-folder" style="color:#f59e0b;font-size:1.2rem"></i>' +
-        '<div style="flex:1"><div style="font-weight:600;color:#1e293b">' + ev.name + '</div>' +
-        '<div style="font-size:.82rem;color:#94a3b8">Created: ' + ds + '</div></div>' +
-        '<a href="' + ev.link + '" target="_blank" style="font-size:.85rem;color:#6366f1;font-weight:500;text-decoration:none">Open in Drive</a>' +
-        '</div>';
+    var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    tbody.innerHTML = res.data.map(function(ev, i) {
+      var d  = ev.createdAt ? new Date(ev.createdAt) : null;
+      var ds = d ? d.getDate() + " " + MONTHS[d.getMonth()] + " '" + String(d.getFullYear()).slice(-2) : '';
+      var link = ev.link
+        ? '<a href="' + ev.link + '" target="_blank" style="color:#6366f1;font-weight:600;text-decoration:none;white-space:nowrap"><i class="fa-solid fa-folder-open"></i> Open</a>'
+        : '—';
+      return '<tr>' +
+        '<td style="width:28px;color:#94a3b8;font-size:.82rem">' + (i+1) + '</td>' +
+        '<td style="font-weight:600;color:#1e293b">' + (ev.name || '—') + '</td>' +
+        '<td style="width:110px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#475569;font-size:.82rem" title="' + (ev.createdBy||'') + '">' + (ev.createdBy || '—') + '</td>' +
+        '<td style="width:60px;white-space:nowrap;color:#64748b;font-size:.82rem">' + ds + '</td>' +
+        '<td style="width:1%;white-space:nowrap">' + link + '</td>' +
+        '</tr>';
     }).join('');
   }).catch(function() {
-    listDiv.innerHTML = '<span style="color:#c62828;font-size:.9rem">Failed to load event folders.</span>';
+    tbody.innerHTML = '<tr><td colspan="5" class="no-data" style="color:#c62828">Failed to load events.</td></tr>';
   });
 }
 
