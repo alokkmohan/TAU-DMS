@@ -282,6 +282,13 @@
       text-decoration: none; font-weight: 500;
     }
     .resend-link:hover { color: #3730a3; text-decoration: underline; }
+    .login-msg {
+      display: none; margin-top: 10px; padding: 10px 14px;
+      border-radius: 8px; font-size: 0.85rem; font-weight: 500; text-align: center;
+    }
+    .login-msg.error   { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .login-msg.success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+    .login-msg.info    { background: #e0e7ff; color: #3730a3; border: 1px solid #a5b4fc; }
 
     /* ═══════════════════════════════════════════
        STATS BAR (legacy — kept for compat)
@@ -817,6 +824,24 @@ function api(action) {
 //  SESSION
 // ════════════════════════════════════════════════
 var SESSION = { token: null, role: null, name: null, email: null, component: '' };
+var currentEmail = '';
+
+function showLoginMsg(msg, type) {
+  var box = document.getElementById('loginMsg');
+  if (!box) return;
+  box.textContent = msg;
+  box.className = 'login-msg ' + (type || '');
+  box.style.display = 'block';
+}
+
+function setLoginLoading(btnId, loading, defaultText) {
+  var btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = loading;
+  btn.innerHTML = loading
+    ? '<span class="spinner" style="display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px"></span> Please wait...'
+    : defaultText;
+}
 
 // -- Dropdowns: served from /dropdowns.json (Git) --
 var DD_LS_KEY = 'dms_dd_v2';
