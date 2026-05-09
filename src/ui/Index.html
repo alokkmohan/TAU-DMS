@@ -720,14 +720,17 @@
   <div class="modal" style="text-align:center;max-width:420px;position:relative">
     <button onclick="document.getElementById('uploadSuccessModal').classList.remove('open')" style="position:absolute;top:10px;right:14px;background:none;border:none;font-size:1.4rem;color:#94a3b8;cursor:pointer;line-height:1" title="Close">&times;</button>
     <div style="font-size:3rem;margin-bottom:10px">✅</div>
-    <div style="font-size:1.2rem;font-weight:700;color:#166534;margin-bottom:8px">Document Uploaded Successfully!</div>
+    <div id="uploadSuccessTitle" style="font-size:1.2rem;font-weight:700;color:#166534;margin-bottom:8px">Document Uploaded Successfully!</div>
     <div id="uploadSuccessFileName" style="font-size:0.88rem;color:#555;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px 12px;margin-bottom:20px;word-break:break-all"></div>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
       <button class="btn btn-outline" style="min-width:160px" onclick="uploadSuccessGoHome()">
         <i class="fa-solid fa-house"></i>&nbsp; Home Dashboard
       </button>
-      <button class="btn btn-primary" style="min-width:160px" onclick="uploadSuccessAnother()">
+      <button id="uploadSuccessAnotherBtn" class="btn btn-primary" style="min-width:160px" onclick="uploadSuccessAnother()">
         <i class="fa-solid fa-cloud-arrow-up"></i>&nbsp; Upload Another
+      </button>
+      <button id="uploadSuccessViewCircularsBtn" class="btn btn-outline" style="min-width:160px;display:none" onclick="uploadSuccessViewCirculars()">
+        <i class="fa-solid fa-bullhorn"></i>&nbsp; View Circulars
       </button>
     </div>
   </div>
@@ -1457,8 +1460,7 @@ function submitUpload() {
         btn.disabled = false; btn.innerHTML = '&#x1F4E4;&nbsp; Upload Circular';
         if (!res.success) { showUploadAlert(res.message, 'error'); return; }
         resetUploadForm();
-        showUploadSuccess(subject + ' (Circular)', 'Visible to all users immediately.');
-        showSection('circulars');
+        showUploadSuccess(subject + ' (Circular)', 'Visible to all users immediately.', true);
       }).catch(function() {
         btn.disabled = false; btn.innerHTML = '&#x1F4E4;&nbsp; Upload Circular';
         showUploadAlert('Server error. Please try again.', 'error');
@@ -1495,10 +1497,22 @@ function showUploadAlert(msg, type) {
 }
 
 // ── Upload success modal ──────────────────────────────────────
-function showUploadSuccess(fileName, extraMsg) {
+function showUploadSuccess(fileName, extraMsg, isCircular) {
   var info = fileName || 'Document';
   if (extraMsg && extraMsg !== fileName) info += '\n' + extraMsg;
   document.getElementById('uploadSuccessFileName').textContent = info;
+  var titleEl    = document.getElementById('uploadSuccessTitle');
+  var anotherBtn = document.getElementById('uploadSuccessAnotherBtn');
+  var circBtn    = document.getElementById('uploadSuccessViewCircularsBtn');
+  if (isCircular) {
+    if (titleEl)    titleEl.textContent      = 'Circular Uploaded Successfully!';
+    if (anotherBtn) anotherBtn.style.display = 'none';
+    if (circBtn)    circBtn.style.display    = '';
+  } else {
+    if (titleEl)    titleEl.textContent      = 'Document Uploaded Successfully!';
+    if (anotherBtn) anotherBtn.style.display = '';
+    if (circBtn)    circBtn.style.display    = 'none';
+  }
   document.getElementById('uploadSuccessModal').classList.add('open');
 }
 function uploadSuccessGoHome() {
@@ -1509,6 +1523,10 @@ function uploadSuccessAnother() {
   document.getElementById('uploadSuccessModal').classList.remove('open');
   refreshUploadDropdowns();
   document.getElementById('subjectInput').focus();
+}
+function uploadSuccessViewCirculars() {
+  document.getElementById('uploadSuccessModal').classList.remove('open');
+  showSection('circulars');
 }
 
 function resetUploadForm() {
