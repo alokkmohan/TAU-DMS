@@ -624,6 +624,26 @@
         </div>
       </div>
 
+      <!-- ++ VERIFY DOCUMENTS ++ -->
+      <div class="section" id="sec-verify">
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+            <div class="card-title" style="margin-bottom:0">&#x2714;&#xFE0F; Pending Approvals</div>
+            <span id="verifyPendingCount" style="font-size:0.85rem;color:#64748b"></span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>#</th><th>Uploaded By</th><th>Document</th><th>Date</th><th>Status</th><th>Action</th></tr>
+              </thead>
+              <tbody id="verifyTableBody">
+                <tr><td colspan="6" class="no-data">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- ── ALL DOCUMENTS (TL + Admin) ── -->
       <div class="section" id="sec-alldocs">
         <div class="card">
@@ -1029,6 +1049,7 @@ function showSection(id) {
   if (id === 'upload')    refreshUploadDropdowns();
   if (id === 'mydocs')    loadDocs();
   if (id === 'alldocs')   loadAllDocs();
+  if (id === 'verify')    loadVerify();
   if (id === 'circulars') loadCirculars();
   if (id === 'images')    loadImageEvents();
   if (id === 'gallery')   loadGallery();
@@ -1670,16 +1691,62 @@ function clearAllFilters() {
 // ════════════════════════════════════════════════
 //  VERIFY / REJECT
 // ════════════════════════════════════════════════
-var rejectDocId = null;
 
-function verifyDoc(docId) {
-  if (!confirm('Verify this document?')) return;
-  api('verifyDocument', SESSION.token, docId)
-    .then(function(res) { bustDocsCache(); alert(res.success ? 'Document verified!' : res.message); loadAllDocs(); });
+// ================================================
+//  VERIFY DOCUMENTS SECTION
+// ================================================
+function loadVerify() {
+  var tbody = document.getElementById('verifyTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="6" class="no-data">Loading...</td></tr>';
+  cachedGetDocuments().then(function(res) {
+    if (!res.success) { tbody.innerHTML = '<tr><td colspan="6" class="no-data" style="color:#c62828">Could not load.</td></tr>'; return; }
+    var rows = (res.data || []).filter(function(d) {
+      if (SESSION.role === 'super_admin') return d.status === 'pending' || d.status === 'tl_verified';
+      return d.status === 'pending';
+    });
+    var countEl = document.getElementById('verifyPendingCount');
+    if (countEl) countEl.textContent = rows.length ? rows.length + ' document(s) awaiting action' : 'All caught up!';
+    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="6" class="no-data">No documents pending. All caught up!</td></tr>'; return; }
+    tbody.innerHTML = rows.map(function(r, i) {
+      var compBadge = r.component ? '<span style="display:inline-block;background:#dbeafe;color:#1d4ed8;font-size:0.72rem;font-weight:700;padding:1px 8px;border-radius:4px;margin-right:4px">' + r.component + '</span>' : '';
+      var subBadge  = r.sub_component ? '<span style="display:inline-block;background:#d1fae5;color:#065f46;font-size:0.72rem;font-weight:600;padding:1px 8px;border-radius:4px">' + r.sub_component + '</span>' : '';
+      var docCell   = '<div style="margin-bottom:4px">' + compBadge + subBadge + '</div><div style="font-weight:600;color:#1e293b;font-size:0.92rem">' + (r.subject || '&mdash;') + '</div>' + (r.description ? '<div style="color:#64748b;font-size:0.79rem;margin-top:2px">' + r.description + '</div>' : '');
+      var btns = '';
+      if (r.status === 'pending') {
+        btns = '<button class="btn btn-success btn-sm" onclick="verifyDoc(\''+r.doc_id+'\',true)"><i class="fa-solid fa-circle-check"></i> Verify</button> <button class="btn btn-danger btn-sm" onclick="openRejectModal(\''+r.doc_id+'\',false,true)"><i class="fa-solid fa-circle-xmark"></i> Reject</button>';
+      } else if (r.status === 'tl_verified' && SESSION.role === 'super_admin') {
+        btns = '<button class="btn btn-success btn-sm" onclick="approveDoc(\''+r.doc_id+'\')"><i class="fa-solid fa-circle-check"></i> Approve</button> <button class="btn btn-danger btn-sm" onclick="openRejectModal(\''+r.doc_id+"\',true,true)"><i class="fa-solid fa-circle-xmark"></i> Reject</button>";
+      }
+      var actionCell = fileTypeBadge(r.file_name) + '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px"><a href="' + toDownloadUrl(r.drive_link) + '" target="_blank" class="btn btn-primary btn-sm"><i class="fa-solid fa-download"></i> Download</a>' + btns + '</div>';
+      return '<tr><td style="width:32px;color:#94a3b8;font-size:0.82rem">' + (i+1) + '</td><td style="font-weight:600;color:#334155">' + (r.uploader_name||'') + '</td><td>' + docCell + '</td><td style="white-space:nowrap">' + r.month + '<br><small style="color:#94a3b8">' + r.year + '</small></td><td>' + statusBadge(r.status) + '</td><td style="min-width:160px">' + actionCell + '</td></tr>';
+    }).join('');
+  });
 }
 
-function openRejectModal(docId) {
+function approveDoc(docId) {
+  if (!confirm('Approve this document?')) return;
+  api('approveDocument', SESSION.token, docId).then(function(res) {
+    bustDocsCache();
+    if (res.success) loadVerify(); else alert(res.message);
+  });
+}
+
+var rejectDocId = null;
+
+function verifyDoc(docId, fromVerify) {
+  if (!confirm('Verify this document?')) return;
+  api('verifyDocument', SESSION.token, docId).then(function(res) {
+    bustDocsCache();
+    if (!res.success) { alert(res.message); return; }
+    if (fromVerify) loadVerify(); else loadAllDocs();
+  });
+}
+
+function openRejectModal(docId, isApprove, fromVerify) {
   rejectDocId = docId;
+  window._rejectIsApprove = !!isApprove;
+  window._rejectFromVerify = !!fromVerify;
   document.getElementById('rejectRemark').value = '';
   document.getElementById('rejectModal').classList.add('open');
 }
@@ -1687,8 +1754,14 @@ function closeRejectModal() { document.getElementById('rejectModal').classList.r
 function confirmReject() {
   var remark = document.getElementById('rejectRemark').value.trim();
   if (!remark) { alert('Please enter a rejection reason.'); return; }
-  api('rejectDocument', SESSION.token, rejectDocId, remark)
-    .then(function(res) { bustDocsCache(); closeRejectModal(); alert(res.success ? 'Document rejected.' : res.message); loadAllDocs(); });
+  var call = window._rejectIsApprove
+    ? api('rejectApproval', SESSION.token, rejectDocId, remark)
+    : api('rejectDocument', SESSION.token, rejectDocId, remark);
+  call.then(function(res) {
+    bustDocsCache(); closeRejectModal();
+    if (!res.success) { alert(res.message); return; }
+    if (window._rejectFromVerify) loadVerify(); else loadAllDocs();
+  });
 }
 
 // ════════════════════════════════════════════════
