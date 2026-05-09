@@ -1,11 +1,8 @@
 function uploadCircular(token, payload) {
   try {
     const session = requireAuth(token);
-    requireRole(session, [
-      CONFIG.ROLES.TEAM_LEAD,    CONFIG.ROLES.STATE_LEAD,
-      CONFIG.ROLES.PROJECT_MANAGER, CONFIG.ROLES.CEO,
-      CONFIG.ROLES.SUPER_ADMIN
-    ]);
+    if (!session) return errorResponse('Not authenticated.');
+    // All roles can upload circulars — no role restriction
 
     const { title, refNumber, remarks, fileBase64, fileName, mimeType } = payload;
     if (!title || !fileBase64 || !fileName) return errorResponse('Title and file are required.');
@@ -20,9 +17,9 @@ function uploadCircular(token, payload) {
     const folderId     = getCircularsFolder();
     const driveResult  = saveFileToDrive(fileBase64, mimeType, autoFileName, folderId);
 
-    // Count active managers
+    // Get all active users (notify everyone except uploader)
     const users    = getSheetData(CONFIG.TABS.USERS);
-    const managers = users.filter(u => u.role === CONFIG.ROLES.MANAGER && u.is_active === true);
+    const managers = users.filter(u => u.is_active === true && u.email !== session.email);
 
     appendRow(CONFIG.TABS.CIRCULARS, {
       circular_id:    circularId,

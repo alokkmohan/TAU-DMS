@@ -405,12 +405,16 @@
                 <option value="">— Select Component —</option>
               </select>
             </div>
-            <div class="form-group">
+            <div class="form-group" id="subCompFormGroup">
               <label>Sub-Component <span style="color:#c62828">*</span></label>
               <select id="subComponentSelect" onchange="fillDescription()" disabled>
                 <option value="">— Select component first —</option>
               </select>
             </div>
+          </div>
+          <!-- Circular note — shown when Circular component selected -->
+          <div id="circularNote" style="display:none;margin-bottom:12px;padding:8px 14px;background:#e3f2fd;border-left:4px solid #1565c0;border-radius:6px;font-size:0.85rem;color:#0d47a1">
+            <b>&#x1F4E2; Circular / Govt Order</b> — No sub-component needed. File will be visible to all users immediately. No approval required.
           </div>
           <!-- Custom component (if not in list) -->
           <div id="customCompGroup" style="display:none;margin-top:-8px;margin-bottom:8px;padding:10px 12px;background:#f3f4f6;border-radius:6px;border:1px dashed #9e9e9e">
@@ -446,7 +450,7 @@
               <button class="btn btn-outline btn-sm" style="align-self:center;white-space:nowrap" onclick="saveCustomSubComponent()">Save &amp; Use</button>
             </div>
           </div>
-          <div style="margin-bottom:8px">
+          <div id="customSubLinkWrap" style="margin-bottom:8px">
             <a href="#" style="font-size:0.82rem;color:#1565c0;text-decoration:none" onclick="toggleCustomSub(event)">
               ➕ Sub-component not in list? Add new
             </a>
@@ -637,58 +641,26 @@
 
       <!-- ── CIRCULARS / GOVT LETTERS ── -->
       <div class="section" id="sec-circulars">
-
-        <!-- Upload form — visible only to TL / SL / PM / CEO / Admin -->
-        <div class="card" id="circularUploadCard" style="display:none">
-          <div class="card-title">📤 Upload Circular / Order</div>
-          <div id="circularAlert" class="alert" style="display:none"></div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Title <span style="color:#c62828">*</span></label>
-              <input type="text" id="circularTitle" placeholder="e.g. Exam Schedule 2025">
-            </div>
-            <div class="form-group">
-              <label>Reference Number <span style="color:#9e9e9e;font-weight:400">(optional)</span></label>
-              <input type="text" id="circularRefNo" placeholder="e.g. EDU/2025/123">
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Remarks <span style="color:#9e9e9e;font-weight:400">(optional)</span></label>
-            <textarea id="circularRemarks" placeholder="Any note for managers..." style="min-height:60px"></textarea>
-          </div>
-          <div class="form-group">
-            <label>Attach File <span style="color:#c62828">*</span> <small style="color:#9e9e9e">(PDF / Word / Image, max 10 MB)</small></label>
-            <div class="file-drop" id="circularFileDrop"
-                 onclick="document.getElementById('circularFileInput').click()"
-                 ondragover="event.preventDefault();this.classList.add('drag-over')"
-                 ondragleave="this.classList.remove('drag-over')"
-                 ondrop="handleCircularDrop(event)">
-              <div class="file-drop-icon">📎</div>
-              <p>Click to browse or drag &amp; drop</p>
-              <div class="file-name" id="circularFileNameDisplay"></div>
-            </div>
-            <input type="file" id="circularFileInput" style="display:none"
-                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                   onchange="handleCircularFileSelect(this)">
-          </div>
-          <button class="btn btn-primary" style="width:auto" id="circularUploadBtn" onclick="submitCircular()">
-            📤&nbsp; Upload Circular
-          </button>
-        </div>
-
-        <!-- List -->
         <div class="card">
-          <div class="card-title" id="circularSectionTitle">📢 Circulars &amp; Orders</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+            <div class="card-title" style="margin-bottom:0">&#x1F4E2; Circulars &amp; Govt Orders</div>
+            <button class="btn btn-outline btn-sm" onclick="showSection('upload')" style="white-space:nowrap">
+              <i class="fa-solid fa-cloud-arrow-up"></i> Upload Circular
+            </button>
+          </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>#</th><th>Title</th><th>Ref No.</th>
-                  <th>Uploaded By</th><th>Date</th><th>Status</th><th>Action</th>
+                  <th style="width:28px">#</th>
+                  <th style="width:88px">Uploaded By</th>
+                  <th>Document</th>
+                  <th style="width:58px">Date</th>
+                  <th style="width:1%;white-space:nowrap">Action</th>
                 </tr>
               </thead>
               <tbody id="circularsTableBody">
-                <tr><td colspan="7" class="no-data">Loading…</td></tr>
+                <tr><td colspan="5" class="no-data">Loading&#x2026;</td></tr>
               </tbody>
             </table>
           </div>
@@ -1047,6 +1019,7 @@ function refreshUploadDropdowns() {
     return;
   }
   while (sel.options.length > 1) sel.remove(1);
+  var cOpt = document.createElement('option'); cOpt.value = 'Circular'; cOpt.textContent = '📢 Circular / Govt Order'; sel.appendChild(cOpt);
   comps.forEach(function(c) {
     var o = document.createElement('option'); o.value = o.textContent = c; sel.appendChild(o);
   });
@@ -1277,12 +1250,36 @@ function loadComponents() {
 }
 
 function loadSubComponents() {
-  var comp = document.getElementById('componentSelect').value;
-  var sub  = document.getElementById('subComponentSelect');
+  var comp     = document.getElementById('componentSelect').value;
+  var sub      = document.getElementById('subComponentSelect');
+  var subGrp   = document.getElementById('subCompFormGroup');
+  var subCust  = document.getElementById('customSubLinkWrap');
+  var custSub  = document.getElementById('customSubGroup');
+  var note     = document.getElementById('circularNote');
+  var btn      = document.getElementById('uploadBtn');
+
   sub.innerHTML = '<option value="">-- Select sub-component --</option>';
-  sub.disabled  = !comp;
   document.getElementById('descriptionInput').value = '';
+
+  if (comp === 'Circular') {
+    // Hide sub-component fields, show note, change button
+    if (subGrp)  subGrp.style.display  = 'none';
+    if (subCust) subCust.style.display = 'none';
+    if (custSub) custSub.style.display = 'none';
+    if (note)    note.style.display    = 'block';
+    if (btn)     btn.innerHTML         = '&#x1F4E4;&nbsp; Upload Circular';
+    sub.disabled = true;
+    return;
+  }
+
+  // Normal component — restore everything
+  if (subGrp)  subGrp.style.display  = '';
+  if (subCust) subCust.style.display = '';
+  if (note)    note.style.display    = 'none';
+  if (btn)     btn.innerHTML         = '&#x1F4E4;&nbsp; Upload Document';
+  sub.disabled = !comp;
   if (!comp) return;
+
   api('getSubComponents', SESSION.token, comp)
     .then(function(res) {
       if (!res.success) return;
@@ -1379,16 +1376,40 @@ function submitUpload() {
   var subComponent = document.getElementById('subComponentSelect').value;
   var subject      = document.getElementById('subjectInput').value.trim();
   var description  = document.getElementById('descriptionInput').value.trim();
-  if (!component || !subComponent || !subject || !selectedFile) {
+  var isCircular   = (component === 'Circular');
+
+  if (!component || !subject || !selectedFile) {
     showUploadAlert('Please fill all required fields and attach a file.', 'error'); return;
   }
+  if (!isCircular && !subComponent) {
+    showUploadAlert('Please select a sub-component.', 'error'); return;
+  }
+
   var btn = document.getElementById('uploadBtn');
   btn.disabled = true;
-  btn.innerHTML = '<span class=\"spinner\"></span>Uploading...';
+  btn.innerHTML = '<span class="spinner"></span>Uploading...';
 
   var reader = new FileReader();
   reader.onload = function(ev) {
     var base64 = ev.target.result.split(',')[1];
+
+    if (isCircular) {
+      api('uploadCircular', SESSION.token, {
+        title: subject, refNumber: '', remarks: description,
+        fileBase64: base64, fileName: selectedFile.name, mimeType: selectedFile.type
+      }).then(function(res) {
+        btn.disabled = false; btn.innerHTML = '&#x1F4E4;&nbsp; Upload Circular';
+        if (!res.success) { showUploadAlert(res.message, 'error'); return; }
+        resetUploadForm();
+        showUploadSuccess(subject + ' (Circular)', 'Visible to all users immediately.');
+        showSection('circulars');
+      }).catch(function() {
+        btn.disabled = false; btn.innerHTML = '&#x1F4E4;&nbsp; Upload Circular';
+        showUploadAlert('Server error. Please try again.', 'error');
+      });
+      return;
+    }
+
     var targetComponent = document.getElementById('targetComponentSelect')
       ? document.getElementById('targetComponentSelect').value : '';
     api('uploadDocument', SESSION.token, {
@@ -1398,20 +1419,19 @@ function submitUpload() {
       targetComponent: targetComponent
     })
     .then(function(res) {
-      btn.disabled = false; btn.innerHTML = 'Upload Document';
+      btn.disabled = false; btn.innerHTML = '&#x1F4E4;&nbsp; Upload Document';
       if (!res.success) { showUploadAlert(res.message, 'error'); return; }
       bustDocsCache();
       resetUploadForm();
       showUploadSuccess(res.data.fileName || 'Document', res.data.message);
     })
     .catch(function() {
-      btn.disabled = false; btn.innerHTML = 'Upload Document';
+      btn.disabled = false; btn.innerHTML = '&#x1F4E4;&nbsp; Upload Document';
       showUploadAlert('Server error. Please try again.', 'error');
     });
   };
   reader.readAsDataURL(selectedFile);
 }
-
 function showUploadAlert(msg, type) {
   var el = document.getElementById('uploadAlert');
   el.textContent = msg; el.className = 'alert alert-' + type; el.style.display = 'block';
@@ -1600,31 +1620,48 @@ function confirmReject() {
 //  CIRCULARS
 // ════════════════════════════════════════════════
 function loadCirculars() {
-  document.getElementById('circularsTableBody').innerHTML = '<tr><td colspan=\"6\" class=\"no-data\">Loading...</td></tr>';
+  document.getElementById('circularsTableBody').innerHTML = '<tr><td colspan=\"5\" class=\"no-data\">Loading...</td></tr>';
   api('getCirculars', SESSION.token)
     .then(function(res) { if (!res.success) return; renderCirculars(res.data); });
 }
 
 function renderCirculars(rows) {
   var tbody = document.getElementById('circularsTableBody');
-  if (!rows.length) { tbody.innerHTML = '<tr><td colspan=\"6\" class=\"no-data\">No circulars found.</td></tr>'; return; }
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="no-data">No circulars yet. Use Upload Document and select Circular component.</td></tr>';
+    return;
+  }
+  var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   tbody.innerHTML = rows.map(function(r, i) {
-    var ackBtn = '';
-    if (SESSION.role === 'manager') {
-      ackBtn = r.acknowledged
-        ? '<span style=\"color:#2e7d32;font-weight:600\">Acknowledged</span>'
-        : '<button class=\"btn btn-success btn-sm\" onclick=\"acknowledgeCircular(\'' + r.circular_id + '\', this)\">Mark as Read</button>';
+    var d  = r.uploaded_at ? new Date(r.uploaded_at) : null;
+    var ds = (d && !isNaN(d))
+      ? d.getDate() + ' ' + MONTHS[d.getMonth()] + " '" + String(d.getFullYear()).slice(-2)
+      : (r.uploaded_at || '');
+    var ext = r.file_name ? (r.file_name.split('.').pop() || '').toUpperCase() : '';
+    var dl  = r.drive_link
+      ? (ext ? '<span style="color:#dc2626;font-weight:700">' + ext + '</span><span style="color:#94a3b8"> : </span>' : '')
+        + '<a href="' + toDownloadUrl(r.drive_link) + '" target="_blank" style="color:#1565c0;font-weight:600;text-decoration:none">Download</a>'
+      : '&#x2014;';
+    var docCell = '<span style="font-weight:600;color:#1e293b">' + (r.title || '&#x2014;') + '</span>';
+    if (r.ref_number) docCell += '<br><span style="font-size:.78rem;color:#94a3b8">Ref: ' + r.ref_number + '</span>';
+    var isManager = (SESSION.role === 'manager' || SESSION.role === 'communication');
+    var ackPart = '';
+    if (isManager) {
+      ackPart = r.acknowledged
+        ? '<br><span style="color:#2e7d32;font-size:.8rem;font-weight:600">&#x2713; Acknowledged</span>'
+        : '<br><button class="btn btn-success btn-sm" style="margin-top:4px" onclick="acknowledgeCircular(\'' + r.circular_id + '\', this)">Mark as Read</button>';
     } else {
-      ackBtn = '<span style=\"font-size:0.8rem;color:#757575\">' + r.ack_count + '/' + r.total_managers + ' acknowledged</span>';
+      ackPart = '<br><span style="font-size:.78rem;color:#94a3b8">' + (r.ack_count||0) + '/' + (r.total_managers||0) + " ack'd</span>";
     }
     return '<tr>' +
-      '<td>' + (i+1) + '</td><td>' + r.title + '</td><td>' + (r.ref_number||'—') + '</td>' +
-      '<td>' + r.uploaded_at + '</td>' +
-      '<td>' + (r.acknowledged ? '<span class=\"badge badge-verified\">Acknowledged</span>' : '<span class=\"badge badge-pending\">Pending</span>') + '</td>' +
-      '<td><a href=\"' + toDownloadUrl(r.drive_link) + '\" target=\"_blank\" class=\"btn btn-outline btn-sm\">Download</a> ' + ackBtn + '</td></tr>';
+      '<td style="width:28px;color:#94a3b8;font-size:.82rem">' + (i+1) + '</td>' +
+      '<td style="width:88px;max-width:88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#475569;font-size:.82rem" title="' + (r.uploader_name||'') + '">' + (r.uploader_name||'&#x2014;') + '</td>' +
+      '<td>' + docCell + '</td>' +
+      '<td style="width:58px;white-space:nowrap;color:#64748b;font-size:.82rem">' + ds + '</td>' +
+      '<td style="width:1%;white-space:nowrap;text-align:left">' + dl + ackPart + '</td>' +
+      '</tr>';
   }).join('');
 }
-
 function acknowledgeCircular(circularId, btn) {
   btn.disabled = true; btn.textContent = '...';
   api('acknowledgeCircular', SESSION.token, circularId)
