@@ -382,7 +382,7 @@
           </div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>#</th><th>Uploaded By</th><th>Document</th><th>Date</th><th>Action</th></tr></thead>
+              <thead><tr><th style="width:28px">#</th><th style="width:88px">Uploaded By</th><th>Document</th><th style="width:58px">Date</th><th style="width:1%;white-space:nowrap">Action</th></tr></thead>
               <tbody id="homeDocsTbody"><tr><td colspan="5" class="no-data">Loading...</td></tr></tbody>
             </table>
           </div>
@@ -540,7 +540,7 @@
             </div>
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
-            <button class="btn btn-primary" id="imageUploadBtn" onclick="submitImageUpload()">
+            <button class="btn btn-primary" id="imageUploadBtn" onclick="submitImageUpload()" disabled style="opacity:.5;cursor:not-allowed">
               <i class="fa-solid fa-cloud-arrow-up"></i> Upload Images
             </button>
             <button class="btn" id="imageClearBtn" onclick="clearImageSelection()" style="display:none;background:#e2e8f0;color:#475569">
@@ -729,6 +729,24 @@
       </button>
       <button class="btn btn-primary" style="min-width:160px" onclick="uploadSuccessAnother()">
         <i class="fa-solid fa-cloud-arrow-up"></i>&nbsp; Upload Another
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ====== IMAGE UPLOAD SUCCESS MODAL ====== -->
+<div class="modal-overlay" id="imageSuccessModal">
+  <div class="modal" style="text-align:center;max-width:420px">
+    <div style="font-size:3rem;margin-bottom:10px">&#x2705;</div>
+    <div style="font-size:1.2rem;font-weight:700;color:#166534;margin-bottom:8px">Images Uploaded Successfully!</div>
+    <div id="imageSuccessInfo" style="font-size:0.88rem;color:#555;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px 12px;margin-bottom:20px"></div>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-outline" style="min-width:160px" onclick="imageSuccessHome()">
+        <i class="fa-solid fa-house"></i>&nbsp; Home Screen
+      </button>
+      <button class="btn btn-primary" style="min-width:180px" onclick="imageSuccessNewEvent()">
+        <i class="fa-solid fa-images"></i>&nbsp; Upload New Event Images
       </button>
     </div>
   </div>
@@ -1202,12 +1220,15 @@ function renderHomeDocs(append) {
         '<a href="' + toDownloadUrl(d.drive_link) + '" target="_blank" style="color:#1565c0;font-weight:600;text-decoration:none">Download</a>'
       : '—';
     var row = document.createElement('tr');
+    var monthAbbr = (d.month || '').slice(0,3);
+    var yearShort  = String(d.year || '').slice(-2);
+    var dateStr    = monthAbbr ? monthAbbr + " '" + yearShort : '';
     row.innerHTML =
-      '<td style="width:32px;color:#94a3b8;font-size:0.82rem">' + num + '</td>' +
-      '<td style="font-weight:600;color:#334155;white-space:nowrap">' + (d.uploader_name || '—') + '</td>' +
+      '<td style="width:28px;color:#94a3b8;font-size:0.82rem">' + num + '</td>' +
+      '<td style="width:88px;max-width:88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#475569;font-size:0.82rem" title="' + (d.uploader_name||'') + '">' + (d.uploader_name || '—') + '</td>' +
       '<td>' + docCell + '</td>' +
-      '<td style="white-space:nowrap;color:#475569">' + (d.month || '') + ' ' + (d.year || '') + '</td>' +
-      '<td style="white-space:nowrap">' + dl + '</td>';
+      '<td style="width:58px;white-space:nowrap;color:#64748b;font-size:0.82rem">' + dateStr + '</td>' +
+      '<td style="width:1%;white-space:nowrap;text-align:left">' + dl + '</td>';
     tbodyEl.appendChild(row);
   });
 
@@ -1668,11 +1689,17 @@ function renderImagePreviews() {
     grid.style.display   = 'none';
     count.style.display  = 'none';
     clearB.style.display = 'none';
+    document.getElementById('imageUploadBtn').disabled = true;
+    document.getElementById('imageUploadBtn').style.opacity = '.5';
+    document.getElementById('imageUploadBtn').style.cursor  = 'not-allowed';
     return;
   }
   count.style.display  = 'block';
   count.textContent    = IMG_FILES.length + ' image' + (IMG_FILES.length > 1 ? 's' : '') + ' selected';
   clearB.style.display = 'inline-flex';
+  document.getElementById('imageUploadBtn').disabled = false;
+  document.getElementById('imageUploadBtn').style.opacity = '1';
+  document.getElementById('imageUploadBtn').style.cursor  = 'pointer';
   grid.innerHTML = '';
   grid.style.display = 'flex';
   IMG_FILES.forEach(function(file, idx) {
@@ -1741,8 +1768,10 @@ function submitImageUpload() {
       if (errors.length) {
         imgAlert('Uploaded ' + done + '/' + IMG_FILES.length + ' images. Failed: ' + errors.join(', '), 'error');
       } else {
-        imgAlert(done + ' image' + (done > 1 ? 's' : '') + ' uploaded successfully to event: ' + eventName, 'success');
+        document.getElementById('imageSuccessInfo').textContent = done + ' image' + (done > 1 ? 's' : '') + ' uploaded to "' + eventName + '"';
+        document.getElementById('imageSuccessModal').classList.add('open');
         clearImageSelection();
+        document.getElementById('eventNameInput').value = '';
         loadImageEvents();
       }
       return;
