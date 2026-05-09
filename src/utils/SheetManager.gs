@@ -43,6 +43,7 @@ function getSheetData(tabName) {
   if (cached) return cached;
 
   const sheet = getSheet(tabName);
+  if (!sheet) return [];                      // tab doesn't exist yet → empty
   const data = sheet.getDataRange().getValues();
   if (data.length < 2) return [];
   const headers = data[0];
