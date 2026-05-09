@@ -1758,17 +1758,18 @@ function submitImageUpload() {
   cur.textContent    = '0';
   bar.style.width    = '0%';
 
-  var done   = 0;
-  var errors = [];
+  var done      = 0;
+  var errors    = [];
+  var lastError = '';
 
   function uploadNext(idx) {
     if (idx >= IMG_FILES.length) {
       btn.disabled       = false;
       prog.style.display = 'none';
       if (errors.length === IMG_FILES.length) {
-        imgAlert('All uploads failed. Please check your connection or re-publish the GAS deployment. Failed: ' + errors.join(', '), 'error');
+        imgAlert('Upload failed — GAS error: "' + lastError + '". Files: ' + errors.join(', '), 'error');
       } else if (errors.length) {
-        imgAlert((done - errors.length) + ' of ' + IMG_FILES.length + ' images uploaded. Failed: ' + errors.join(', '), 'error');
+        imgAlert((done - errors.length) + ' of ' + IMG_FILES.length + ' uploaded. Failed: ' + errors.join(', ') + ' (' + lastError + ')', 'error');
       } else {
         document.getElementById('imageSuccessInfo').textContent = done + ' image' + (done > 1 ? 's' : '') + ' uploaded to "' + eventName + '"';
         document.getElementById('imageSuccessModal').classList.add('open');
@@ -1793,7 +1794,8 @@ function submitImageUpload() {
         bar.style.width = Math.round(done / IMG_FILES.length * 100) + '%';
         if (!res.success) {
           errors.push(file.name);
-          console.warn('Upload failed for ' + file.name + ': ' + (res.message || 'unknown error'));
+          lastError = res.message || 'unknown error';
+          console.warn('Upload failed for ' + file.name + ': ' + lastError);
         }
         uploadNext(idx + 1);
       }).catch(function() {
