@@ -133,7 +133,7 @@ function verifyOTP(email, enteredOTP) {
     const user        = getUserByEmail(email);
     const userState   = user.state       || '';
     const stateGroup  = user.state_group || getStateGroup(userState);
-    const component   = user.component   || '';
+    const component   = user.component_access || '';
     const token       = _createSession(email, user.role, user.name, userState, stateGroup, component);
 
     writeAuditLog(email, user.name, 'LOGIN_SUCCESS', '', '');
