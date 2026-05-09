@@ -31,7 +31,8 @@ const CONFIG = {
     STATE_LEAD:      'state_lead',
     PROJECT_MANAGER: 'project_manager',
     CEO:             'ceo',
-    SUPER_ADMIN:     'super_admin'
+    SUPER_ADMIN:     'super_admin',
+    IT_ADMIN:        'it_admin'
   },
 
   // ── Document Status Flow ──────────────────────

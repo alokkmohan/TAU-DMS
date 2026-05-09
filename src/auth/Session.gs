@@ -44,7 +44,11 @@ function requireAuth(token) {
 }
 
 function requireRole(session, allowedRoles) {
-  if (!allowedRoles.includes(session.role)) {
+  // it_admin has all super_admin rights — normalize before checking
+  const effectiveRole = (session.role === CONFIG.ROLES.IT_ADMIN)
+    ? CONFIG.ROLES.SUPER_ADMIN
+    : session.role;
+  if (!allowedRoles.includes(effectiveRole)) {
     throw new Error('ACCESS_DENIED');
   }
 }

@@ -182,6 +182,7 @@ function getShareableUsers(token) {
       }
       case CONFIG.ROLES.CEO:
       case CONFIG.ROLES.SUPER_ADMIN:
+      case CONFIG.ROLES.IT_ADMIN:
         filtered = users.filter(u =>
           u.role === CONFIG.ROLES.STATE_LEAD || u.role === CONFIG.ROLES.PROJECT_MANAGER
         );
@@ -369,7 +370,7 @@ function getDocuments(token, filters) {
       const approvedStatuses = [CONFIG.STATUS.TL_VERIFIED, CONFIG.STATUS.ADMIN_APPROVED, CONFIG.STATUS.ARCHIVED];
       if (viewOnlyRoles.includes(role) && !approvedStatuses.includes(r.status)) return false;
 
-      if (role === CONFIG.ROLES.SUPER_ADMIN) return true;
+      if (role === CONFIG.ROLES.SUPER_ADMIN || role === CONFIG.ROLES.IT_ADMIN) return true;
 
       // Component-based sharing (target_component)
       if (role === CONFIG.ROLES.MANAGER) {
@@ -417,8 +418,8 @@ function deleteDocument(token, docId) {
     const doc    = rows.find(r => r.doc_id === docId);
     if (!doc) return errorResponse('Document not found.');
 
-    // Only uploader or super_admin can delete
-    if (doc.uploader_email !== session.email && session.role !== CONFIG.ROLES.SUPER_ADMIN) {
+    // Only uploader or super_admin/it_admin can delete
+    if (doc.uploader_email !== session.email && session.role !== CONFIG.ROLES.SUPER_ADMIN && session.role !== CONFIG.ROLES.IT_ADMIN) {
       return errorResponse('You can only delete your own documents.');
     }
 
@@ -462,8 +463,8 @@ function updateDocument(token, docId, updates) {
     const doc  = rows.find(r => r.doc_id === docId);
     if (!doc) return errorResponse('Document not found.');
 
-    // Only owner or super_admin can edit
-    if (doc.uploader_email !== session.email && session.role !== CONFIG.ROLES.SUPER_ADMIN) {
+    // Only owner or super_admin/it_admin can edit
+    if (doc.uploader_email !== session.email && session.role !== CONFIG.ROLES.SUPER_ADMIN && session.role !== CONFIG.ROLES.IT_ADMIN) {
       return errorResponse('You can only edit your own documents.');
     }
 

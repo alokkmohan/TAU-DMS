@@ -893,7 +893,7 @@ function showDashboard() {
   document.getElementById('dashboardPage').style.display = 'block';
   document.getElementById('userNameDisplay').textContent = SESSION.name;
   var roleLabels = {
-    super_admin: 'Super Admin', team_lead: 'Team Lead',
+    super_admin: 'Super Admin', it_admin: 'IT Admin', team_lead: 'Team Lead',
     state_lead: 'State Lead', project_manager: 'Project Manager',
     ceo: 'CEO', manager: 'Manager'
   };
@@ -1020,7 +1020,7 @@ document.addEventListener('keydown', function(e) {
 // ════════════════════════════════════════════════
 function buildSidebar() {
   var role     = (SESSION.role || '').toLowerCase();
-  var isTLPlus = ['team_lead','super_admin','state_lead','project_manager','ceo'].includes(role);
+  var isTLPlus = ['team_lead','super_admin','it_admin','state_lead','project_manager','ceo'].includes(role);
 
   var items = [
     { id: 'home',      icon: 'fa-house',           label: 'Home' },
@@ -1145,7 +1145,7 @@ function loadHome() {
 
     HOME_ALL_DOCS = docs;
 
-    var isTLPlus = ['team_lead','super_admin','state_lead','project_manager','ceo'].includes((SESSION.role||'').toLowerCase());
+    var isTLPlus = ['team_lead','super_admin','it_admin','state_lead','project_manager','ceo'].includes((SESSION.role||'').toLowerCase());
     var cards = [
       { key: 'components', label: 'Total Components', value: components.length,    color: '#4527a0', bg: '#ede7f6', filter: null },
       { key: 'all',        label: 'Total Documents',  value: publishedDocs.length, color: '#1a237e', bg: '#e8eaf6', filter: 'all'  },
@@ -1317,7 +1317,7 @@ function loadComponents() {
   var shareGroup = document.getElementById('shareWithGroup');
   if (shareGroup) {
     shareGroup.style.display =
-      (SESSION.role === 'team_lead' || SESSION.role === 'super_admin') ? 'block' : 'none';
+      ['team_lead','super_admin','it_admin'].includes((SESSION.role||'').toLowerCase()) ? 'block' : 'none';
   }
   api('getComponents', SESSION.token)
     .then(function(res) {
@@ -1666,7 +1666,7 @@ function renderDocsTable(tbodyId, rows, showUploader) {
     tbody.innerHTML = '<tr><td colspan="6" class="no-data">No documents found.</td></tr>'; return;
   }
   tbody.innerHTML = rows.map(function(r, i) {
-    var canVerify = ['team_lead','super_admin','state_lead','project_manager','ceo'].includes((SESSION.role||'').toLowerCase()) && r.status === 'pending';
+    var canVerify = ['team_lead','super_admin','it_admin','state_lead','project_manager','ceo'].includes((SESSION.role||'').toLowerCase()) && r.status === 'pending';
     var verifyBtns = canVerify
       ? '<button class="btn btn-success btn-sm" onclick="verifyDoc(\'' + r.doc_id + '\')"><i class="fa-solid fa-circle-check"></i> Verify</button> ' +
         '<button class="btn btn-danger btn-sm" onclick="openRejectModal(\'' + r.doc_id + '\')"><i class="fa-solid fa-circle-xmark"></i> Reject</button>'
@@ -1738,7 +1738,7 @@ function loadVerify() {
   cachedGetDocuments().then(function(res) {
     if (!res.success) { tbody.innerHTML = '<tr><td colspan="6" class="no-data" style="color:#c62828">Could not load.</td></tr>'; return; }
     var rows = (res.data || []).filter(function(d) {
-      if (SESSION.role === 'super_admin') return d.status === 'pending' || d.status === 'tl_verified';
+      if (['super_admin','it_admin'].includes((SESSION.role||'').toLowerCase())) return d.status === 'pending' || d.status === 'tl_verified';
       return d.status === 'pending';
     });
     var countEl = document.getElementById('verifyPendingCount');
@@ -1753,7 +1753,7 @@ function loadVerify() {
       if (r.status === 'pending') {
         btns = '<button class="btn btn-success btn-sm vfy-btn" data-id="' + r.doc_id + '" data-action="verify"><i class="fa-solid fa-circle-check"></i> Verify</button> ' +
                '<button class="btn btn-danger btn-sm vfy-btn" data-id="' + r.doc_id + '" data-action="reject"><i class="fa-solid fa-circle-xmark"></i> Reject</button>';
-      } else if (r.status === 'tl_verified' && SESSION.role === 'super_admin') {
+      } else if (r.status === 'tl_verified' && ['super_admin','it_admin'].includes((SESSION.role||'').toLowerCase())) {
         btns = '<button class="btn btn-success btn-sm vfy-btn" data-id="' + r.doc_id + '" data-action="approve"><i class="fa-solid fa-circle-check"></i> Approve</button> ' +
                '<button class="btn btn-danger btn-sm vfy-btn" data-id="' + r.doc_id + '" data-action="reject-approval"><i class="fa-solid fa-circle-xmark"></i> Reject</button>';
       }

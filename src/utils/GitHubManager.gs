@@ -136,7 +136,7 @@ function migrateDropdownsSheetToGit() {
 function migrateDropdowns(token) {
   try {
     const session = requireAuth(token);
-    if (session.role !== CONFIG.ROLES.SUPER_ADMIN) return errorResponse('Super admin only.');
+    if (session.role !== CONFIG.ROLES.SUPER_ADMIN && session.role !== CONFIG.ROLES.IT_ADMIN) return errorResponse('Super admin only.');
     return migrateDropdownsSheetToGit();
   } catch(e) {
     return errorResponse(e.message);
