@@ -109,25 +109,39 @@ function uploadSingleImage(token, params) {
   }
 }
 
-// ── Get list of event folders with uploader info ─────────────────
+// ── Get list of event folders — read directly from Drive ─────────────
 function getImageEvents(token) {
   try {
     const session = requireAuth(token);
     if (!session) return errorResponse('Not authenticated.');
 
-    // Read from ImageEvents sheet (has uploader info)
-    const rows = getSheetData(CONFIG.TABS.IMAGE_EVENTS);
-    const events = rows.map(function(r) {
-      return {
-        name:      r.event_name || '',
-        createdBy: r.created_by_name || '',
-        folderId:  r.folder_id || '',
-        link:      r.folder_id
-                     ? 'https://drive.google.com/drive/folders/' + r.folder_id
-                     : '',
-        createdAt: r.created_at || ''
-      };
-    });
+    const imagesRoot = _getImagesRootFolder();
+    const folderIter = imagesRoot.getFolders();
+    const events = [];
+
+    while (folderIter.hasNext()) {
+      const folder = folderIter.next();
+      events.push({
+        name:      folder.getName(),
+        createdBy: '',                          // Drive doesn't store uploader name
+        folderId:  folder.getId(),
+        link:      'https://drive.google.com/drive/folders/' + folder.getId(),
+        createdAt: folder.getDateCreated().toISOString()
+      });
+    }
+
+    // Also try to enrich with uploader name from sheet (best-effort)
+    try {
+      const rows = getSheetData(CONFIG.TABS.IMAGE_EVENTS);
+      if (rows && rows.length) {
+        events.forEach(function(ev) {
+          const match = rows.find(function(r) {
+            return (r.event_name || '').toLowerCase() === ev.name.toLowerCase();
+          });
+          if (match) ev.createdBy = match.created_by_name || '';
+        });
+      }
+    } catch(e) { /* sheet enrichment is optional */ }
 
     // Newest first
     events.sort(function(a, b) {
