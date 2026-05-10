@@ -1711,7 +1711,10 @@ function loadAllDocs() {
   document.getElementById('allDocsTableBody').innerHTML = '<tr><td colspan="8" class="no-data">Loading...</td></tr>';
   cachedGetDocuments().then(function(res) {
     if (!res.success) return;
-    renderDocsTable('allDocsTableBody', clientFilter(res.data, getFilters('allFilter')), true);
+    // Sirf verified/approved docs — pending Verify queue mein hain
+    var VISIBLE = ['tl_verified', 'admin_approved'];
+    var visible = (res.data || []).filter(function(d) { return VISIBLE.includes(d.status); });
+    renderDocsTable('allDocsTableBody', clientFilter(visible, getFilters('allFilter')), true);
   });
 }
 
