@@ -498,9 +498,8 @@ function _notifyTeamLead(uploaderName, subject, component, subComponent, state) 
   try {
     const users = getSheetData(CONFIG.TABS.USERS);
     const tls   = users.filter(u =>
-      (u.role === CONFIG.ROLES.TEAM_LEAD || u.role === CONFIG.ROLES.STATE_LEAD) &&
-      u.is_active === true &&
-      (!state || (u.state || '').toLowerCase() === state.toLowerCase())
+      u.role === CONFIG.ROLES.TEAM_LEAD &&
+      u.is_active === true
     );
     tls.forEach(tl => {
       GmailApp.sendEmail(
