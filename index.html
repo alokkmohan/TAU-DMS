@@ -291,6 +291,25 @@
     .login-msg.info    { background: #e0e7ff; color: #3730a3; border: 1px solid #a5b4fc; }
 
     /* ═══════════════════════════════════════════
+       TOAST NOTIFICATION
+    ═══════════════════════════════════════════ */
+    #toastBox {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+      z-index: 9999; display: flex; flex-direction: column; gap: 8px; align-items: center;
+      pointer-events: none;
+    }
+    .toast {
+      padding: 12px 24px; border-radius: 10px; font-size: 0.9rem; font-weight: 600;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.18); opacity: 0;
+      transform: translateY(16px); transition: opacity .3s, transform .3s;
+      pointer-events: none; white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { background: #166534; color: #fff; }
+    .toast.error   { background: #991b1b; color: #fff; }
+    .toast.info    { background: #1e3a8a; color: #fff; }
+
+    /* ═══════════════════════════════════════════
        DOCUMENT VIEWER MODAL
     ═══════════════════════════════════════════ */
     #docViewerModal { align-items: flex-start; padding: 0; }
@@ -800,6 +819,9 @@
 </div>
 
 
+<!-- ══════════ TOAST ══════════ -->
+<div id="toastBox"></div>
+
 <!-- ══════════ DOCUMENT VIEWER MODAL ══════════ -->
 <div class="modal-overlay" id="docViewerModal" onclick="closeDocViewer(event)">
   <div class="doc-viewer-box" onclick="event.stopPropagation()">
@@ -878,6 +900,20 @@ function api(action) {
 // ════════════════════════════════════════════════
 var SESSION = { token: null, role: null, name: null, email: null, component: '' };
 var currentEmail = '';
+
+function showToast(msg, type, duration) {
+  var box = document.getElementById('toastBox');
+  if (!box) return;
+  var t = document.createElement('div');
+  t.className = 'toast ' + (type || 'info');
+  t.textContent = msg;
+  box.appendChild(t);
+  setTimeout(function() { t.classList.add('show'); }, 10);
+  setTimeout(function() {
+    t.classList.remove('show');
+    setTimeout(function() { if (t.parentNode) t.parentNode.removeChild(t); }, 350);
+  }, duration || 3000);
+}
 
 function showLoginMsg(msg, type) {
   var box = document.getElementById('loginMsg');
@@ -1782,12 +1818,17 @@ function renderDocsTable(tbodyId, rows, showUploader) {
       '<div style="margin-bottom:4px">' + compBadge + subBadge + '</div>' +
       '<div style="font-weight:600;color:#1e293b;font-size:0.92rem">' + (r.subject || '—') + '</div>' +
       (r.description ? '<div style="color:#64748b;font-size:0.79rem;margin-top:2px">' + r.description + '</div>' : '');
+    // Delete button: sirf uploader apna pending doc delete kar sakta hai
+    var canDelete = r.status === 'pending' && r.uploader_email === SESSION.email;
+    var deleteBtn = canDelete
+      ? '<button class="btn btn-sm del-doc-btn" data-id="' + r.doc_id + '" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5"><i class="fa-solid fa-trash"></i> Delete</button>'
+      : '';
     var actionCell =
       fileTypeBadge(r.file_name) +
       '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">' +
         (r.drive_link ? '<button class="btn btn-primary btn-sm view-doc-btn" data-dl="' + r.drive_link + '" data-title="' + (r.subject||r.file_name||'').replace(/"/g,'&quot;') + '" data-fname="' + (r.file_name||'').replace(/"/g,'&quot;') + '"><i class="fa-solid fa-eye"></i> View</button>' : '') +
         (r.drive_link ? '<a href="' + toDownloadUrl(r.drive_link) + '" target="_blank" class="btn btn-outline btn-sm"><i class="fa-solid fa-download"></i></a>' : '') +
-        verifyBtns +
+        verifyBtns + deleteBtn +
       '</div>';
     var dateCell = showUploader ? (r.month + ' ' + r.year) : (r.month + '<br><small style="color:#94a3b8">' + r.year + '</small>');
     return '<tr>' +
@@ -1799,10 +1840,12 @@ function renderDocsTable(tbodyId, rows, showUploader) {
       '<td style="min-width:140px">' + actionCell + '</td>' +
       '</tr>';
   }).join('');
-  // event delegation for View buttons
+  // event delegation for View + Delete buttons
   tbody.onclick = function(e) {
-    var btn = e.target.closest('.view-doc-btn');
-    if (btn) openDocViewer(btn.dataset.dl, btn.dataset.title, btn.dataset.fname);
+    var viewBtn = e.target.closest('.view-doc-btn');
+    if (viewBtn) { openDocViewer(viewBtn.dataset.dl, viewBtn.dataset.title, viewBtn.dataset.fname); return; }
+    var delBtn = e.target.closest('.del-doc-btn');
+    if (delBtn) deleteDoc(delBtn.dataset.id);
   };
 }
 
@@ -1924,8 +1967,19 @@ function verifyDoc(docId, fromVerify) {
   if (!confirm('Verify this document?')) return;
   api('verifyDocument', SESSION.token, docId).then(function(res) {
     bustDocsCache();
-    if (!res.success) { alert(res.message); return; }
+    if (!res.success) { showToast(res.message, 'error'); return; }
+    showToast('✅ Document verified successfully!', 'success');
     if (fromVerify) loadVerify(); else loadAllDocs();
+  });
+}
+
+function deleteDoc(docId) {
+  if (!confirm('Are you sure you want to delete this document? This cannot be undone.')) return;
+  api('deleteDocument', SESSION.token, docId).then(function(res) {
+    bustDocsCache();
+    if (!res.success) { showToast(res.message, 'error'); return; }
+    showToast('🗑️ Document deleted.', 'success');
+    loadDocs();
   });
 }
 
