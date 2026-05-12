@@ -14,6 +14,15 @@
       ]
     },
     {
+      "component": "Alankar",
+      "sub_components": [
+        { "sub": "Construction", "desc": "" },
+        { "sub": "Maintenance", "desc": "" },
+        { "sub": "Inspection Report", "desc": "" },
+        { "sub": "Procurement", "desc": "" }
+      ]
+    },
+    {
       "component": "Civil",
       "sub_components": [
         { "sub": "Construction", "desc": "" },
@@ -47,6 +56,24 @@
         { "sub": "Smart Class", "desc": "" },
         { "sub": "Data Management", "desc": "" },
         { "sub": "Technical Support", "desc": "" }
+      ]
+    },
+    {
+      "component": "PM SHRI",
+      "sub_components": [
+        { "sub": "Construction", "desc": "" },
+        { "sub": "Maintenance", "desc": "" },
+        { "sub": "Inspection Report", "desc": "" },
+        { "sub": "Procurement", "desc": "" }
+      ]
+    },
+    {
+      "component": "Samagra",
+      "sub_components": [
+        { "sub": "Construction", "desc": "" },
+        { "sub": "Maintenance", "desc": "" },
+        { "sub": "Inspection Report", "desc": "" },
+        { "sub": "Procurement", "desc": "" }
       ]
     },
     {
