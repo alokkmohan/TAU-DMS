@@ -198,9 +198,18 @@ function getShareableUsers(token) {
 }
 
 function _getUserComponentAccess(email) {
-  const users  = getSheetData(CONFIG.TABS.USERS);
-  const user   = users.find(u => u.email === email);
+  const users = getSheetData(CONFIG.TABS.USERS);
+  const user  = users.find(u => u.email === email);
   if (!user) return 'ALL';
+
+  // Senior roles always see all components
+  const allRoles = [
+    CONFIG.ROLES.IT_ADMIN, CONFIG.ROLES.SUPER_ADMIN,
+    CONFIG.ROLES.TEAM_LEAD, CONFIG.ROLES.STATE_LEAD,
+    CONFIG.ROLES.PROJECT_MANAGER, CONFIG.ROLES.CEO
+  ];
+  if (allRoles.includes((user.role || '').toLowerCase().trim())) return 'ALL';
+
   const access = user.component_access || '';
   if (!access || access.toString().trim().toUpperCase() === 'ALL') return 'ALL';
   return access.toString().trim();
